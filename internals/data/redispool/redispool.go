@@ -34,9 +34,7 @@ var redisHeartbeatConnOnce = sync.Once{}
 
 func Init() {
 	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		connString := os.Getenv(string(envConsts.REDIS_STORE_URL))
 		redisStoreConnOnce.Do(func() {
 			opts, err := goRedis.ParseURL(connString)
@@ -45,9 +43,9 @@ func Init() {
 			}
 			redisStoreConn = goRedis.NewClient(opts)
 		})
-	}()
-	wg.Add(1)
-	go func() {
+	})
+
+	wg.Go(func() {
 		defer wg.Done()
 		connString := os.Getenv(string(envConsts.REDIS_FANOUT_URL))
 		redisFanoutConnOnce.Do(func() {
@@ -57,9 +55,8 @@ func Init() {
 			}
 			redisFanoutConn = goRedis.NewClient(opts)
 		})
-	}()
-	wg.Add(1)
-	go func() {
+	})
+	wg.Go(func() {
 		defer wg.Done()
 		connString := os.Getenv(string(envConsts.REDIS_HEARTBEAT_URL))
 		redisHeartbeatConnOnce.Do(func() {
@@ -69,7 +66,7 @@ func Init() {
 			}
 			redisHeartbeatConn = goRedis.NewClient(opts)
 		})
-	}()
+	})
 	wg.Wait()
 }
 func Client(pool RedisDB) *goRedis.Client {
