@@ -8,17 +8,17 @@ import (
 
 type DogPile struct {
 	Count uint64
-	Mux   sync.Mutex
+	mux   sync.Mutex
 }
 
 func (d *DogPile) Increase() {
-	d.Mux.Lock()
-	defer d.Mux.Unlock()
+	d.mux.Lock()
+	defer d.mux.Unlock()
 	d.Count = d.Count + 1
 }
 func (d *DogPile) Decrease() {
-	d.Mux.Lock()
-	defer d.Mux.Unlock()
+	d.mux.Lock()
+	defer d.mux.Unlock()
 	d.Count = d.Count - 1
 }
 
@@ -30,6 +30,6 @@ func (d *DogPile) GetNumberOfConnections() uint64 {
 func New() DogPile {
 	return DogPile{
 		Count: 0,
-		Mux:   sync.Mutex{},
+		mux:   sync.Mutex{},
 	}
 }
