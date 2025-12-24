@@ -1,8 +1,6 @@
 package UserHandlersV1
 
 import (
-	"net/http"
-
 	"github.com/go-chi/chi/v5"
 )
 
@@ -11,7 +9,7 @@ import (
 func Routes() chi.Router {
 	r := chi.NewRouter()
 
-	r.Post("/:user_id", func(w http.ResponseWriter, r *http.Request) {})
+	r.Patch("/users/:user_id", UpdateUser)
 
 	return r
 }
