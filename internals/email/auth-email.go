@@ -43,7 +43,7 @@ func (e *AuthEmails) SendEmailVerificaionToken(ctx context.Context, opts SendEma
 				HTMLPart: *emailHtml,
 			},
 		},
-	})
+	}, mailjet.WithContext(ctx))
 	if err != nil {
 		return err
 	}
