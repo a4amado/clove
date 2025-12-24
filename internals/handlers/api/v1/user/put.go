@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	httpheaders "github.com/utain/httpheaders"
 	mediatypes "github.com/utain/httpheaders/mediatypes"
 )
@@ -64,8 +65,11 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = db.UpdateUserEmail(r.Context(), repository.UpdateUserEmailParams{
-		Email:  *body.Email,
-		UserID: userUUID,
+		Email: *body.Email,
+		UserID: pgtype.UUID{
+			Bytes: userUUID,
+			Valid: true,
+		},
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
