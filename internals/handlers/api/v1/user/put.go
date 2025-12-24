@@ -40,7 +40,7 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	r.Body = http.MaxBytesReader(w, r.Body, 1000) // 1MB limit
+	r.Body = http.MaxBytesReader(w, r.Body, 1000) // 1KB limit
 	defer r.Body.Close()
 
 	var body UpdateUserBody
