@@ -17,4 +17,4 @@ CREATE TABLE "app" (
 );
 
 create index app_id_idx on "app"("id");
-create index app_slug_idx on "app"("app_slug");
+create index app_slug_idx on "app"("appSlug");

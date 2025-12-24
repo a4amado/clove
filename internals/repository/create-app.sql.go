@@ -12,7 +12,6 @@ import (
 )
 
 const insertApp = `-- name: InsertApp :one
-
 INSERT INTO "app"
 ("appSlug", "region", "appType", "userId", "allowedOrigins")
 values
@@ -28,10 +27,6 @@ type InsertAppParams struct {
 	Allowedorigins []string    `json:"allowedorigins"`
 }
 
-// "id" UUID PRIMARY KEY NOT NULL DEFAULT uuid_generate_v4(),
-// "app_slug" VARCHAR(255) NOT NULL UNIQUE,
-// "region" region[] NOT NULL,
-// "app_type" app_type NOT NULL
 func (q *Queries) InsertApp(ctx context.Context, arg InsertAppParams) (App, error) {
 	row := q.db.QueryRow(ctx, insertApp,
 		arg.Appslug,
