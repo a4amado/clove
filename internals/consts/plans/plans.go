@@ -1,9 +1,9 @@
-// we go 3 plans available
+// we have 3 plans available
 // Free, Standard, Pro
 // each plan has its own limits and features
 // free has a message limit of 4KB per message, 10000 per month  and  50 concurrent connections
-// standard has a message limit of 16KB per message, 100000 per month, and 200 concurrent connections
-// pro has no message limit of 32KB per message and 1000 concurrent connections
+// standard has a message limit of 16KB per message, unlimited monthly messages, and 200 concurrent connections
+// pro has a message limit of 32KB per message, unlimited monthly messages, and 1000 concurrent connections
 package plans
 
 import (
