@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"embed"
 	_ "embed"
-	"errors"
 	"fmt"
 	"sync"
 	"text/template"
@@ -27,10 +26,6 @@ func Init() {
 
 }
 
-type templateF interface {
-	Render() string
-}
-
 type VerifyEmailTemplate struct {
 	Token string
 }
@@ -41,9 +36,7 @@ func (d *VerifyEmailTemplate) formatEmailverificationURL(token string) string {
 }
 
 func (d *VerifyEmailTemplate) Render() (*string, error) {
-	if templates == nil {
-		panic(errors.New("email templates has not been initialized"))
-	}
+	Init()
 	buf := new(bytes.Buffer)
 	err := templates.ExecuteTemplate(buf, "verify-email.tmpl", map[string]string{
 		"verification_url": d.formatEmailverificationURL(d.Token),
