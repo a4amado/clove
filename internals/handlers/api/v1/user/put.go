@@ -3,7 +3,6 @@ package UserHandlersV1
 import (
 	dbPool "clove/internals/data/database/pool"
 	"clove/internals/repository"
-	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -64,7 +63,7 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = db.UpdateUserEmail(context.Background(), repository.UpdateUserEmailParams{
+	err = db.UpdateUserEmail(r.Context(), repository.UpdateUserEmailParams{
 		Email:  *body.Email,
 		UserID: userUUID,
 	})
