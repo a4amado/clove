@@ -2,6 +2,9 @@ package main
 
 import (
 	envConsts "clove/internals/consts/env"
+	dbPool "clove/internals/data/database/pool"
+	mongoDB "clove/internals/data/mongo"
+	redisPool "clove/internals/data/redispool"
 	_ "embed"
 	"errors"
 	"fmt"
@@ -35,6 +38,12 @@ func init() {
 	if msg.String() != "" {
 		panic(errors.New(msg.String()))
 	}
+
+	dbPool.Client()
+	redisPool.Client(redisPool.RedisFanout)
+	redisPool.Client(redisPool.RedisHeartbeat)
+	redisPool.Client(redisPool.RedisStore)
+	mongoDB.Client()
 
 }
 
