@@ -122,17 +122,21 @@ func (c *Connection) writePump() {
 		case message, ok := <-c.send:
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
+				c.writeLock.Lock()
 
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				c.writeLock.Unlock()
+
 				c.Close()
 				return
 			}
-
+			c.writeLock.Lock()
 			if err := c.writeMessage(websocket.BinaryMessage, message); err != nil {
 				log.Printf("Error writing message: %v", err)
-
+				c.writeLock.Unlock()
 				return
 			}
+			c.writeLock.Unlock()
 
 		case <-ticker.C:
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
