@@ -16,7 +16,7 @@ var once = &sync.Once{}
 var templates *template.Template
 
 // render_init initializes the package's template set by parsing all `*.tmpl` files from the embedded filesystem.
-// 
+//
 // It runs the initialization exactly once (safe for concurrent callers) and assigns the parsed templates to the package-level `templates` variable.
 // The function will panic if template parsing fails.
 func render_init() {
@@ -39,14 +39,15 @@ func (d *VerifyEmailTemplate) formatEmailverificationURL(token string) string {
 	return fmt.Sprintf("https://clove.dev/api/v1/auth/verify-email?token=some-token%s", token)
 }
 
-func (d *VerifyEmailTemplate) Render() string {
+func (d *VerifyEmailTemplate) Render() (*string, error) {
 	render_init()
 	buf := new(bytes.Buffer)
 	err := templates.ExecuteTemplate(buf, "verify-email.tmpl", map[string]string{
 		"verification_url": d.formatEmailverificationURL(d.Token),
 	})
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return buf.String()
+	s := buf.String()
+	return &s, nil
 }

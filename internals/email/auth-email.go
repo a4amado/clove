@@ -22,8 +22,11 @@ func (e *AuthEmails) SendEmailVerificaionToken(ctx context.Context, opts SendEma
 	email := emailtemplates.VerifyEmailTemplate{
 		Token: opts.Token,
 	}
-
-	_, err := e.email.Client.SendMailV31(&mailjet.MessagesV31{
+	emailHtml, err := email.Render()
+	if err != nil {
+		return err
+	}
+	_, err = e.email.Client.SendMailV31(&mailjet.MessagesV31{
 		Info: []mailjet.InfoMessagesV31{
 			{
 				To: &mailjet.RecipientsV31{
@@ -37,7 +40,7 @@ func (e *AuthEmails) SendEmailVerificaionToken(ctx context.Context, opts SendEma
 					Name:  e.email.FromName,
 				},
 				Subject:  "Verify your email",
-				HTMLPart: email.Render(),
+				HTMLPart: *emailHtml,
 			},
 		},
 	})
