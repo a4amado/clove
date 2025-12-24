@@ -3,6 +3,7 @@ package AppHandlersV1
 import (
 	appConsts "clove/internals/consts/app"
 	dbPool "clove/internals/data/database/pool"
+	redisPool "clove/internals/data/redispool"
 	headers "clove/internals/handlers/api/response-utils/consts"
 	"clove/internals/meridian"
 	"clove/internals/repository"
@@ -215,6 +216,7 @@ func (c *Connection) subscribeToChannels(ctx context.Context, meridianClient *me
 
 	return nil
 }
+
 // UserConnect upgrades the incoming HTTP request to a WebSocket for the specified app
 // and subscribes the resulting connection to the requested channel(s).
 //
@@ -250,7 +252,7 @@ func UserConnect(w http.ResponseWriter, r *http.Request) {
 	app, err := meridian.Client().FetchApp(ctx, appID)
 
 	// Real cache error (not a miss) - fail fast
-	if err != nil && !errors.Is(err, meridian.ErrCacheMiss) {
+	if err != nil && !errors.Is(err, redisPool.ErrCacheMiss) {
 		log.Printf("Cache error fetching app %s: %v", appID, err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return

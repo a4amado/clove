@@ -67,11 +67,12 @@ func (c *Meridian) PublishReplicatableAppMsgToKafka(ctx context.Context, msg Rep
 	// 2. if fails, send it via kafka to all regions (including source region), to ensure eventual consistency
 	// 3. bc i don't want to deal with retry here
 	if err != nil {
+		targetRegions = repository.AllRegionValues()
+	} else {
 		targetRegions = slices.DeleteFunc(repository.AllRegionValues(), func(r repository.Region) bool {
 			return getCurrentMachineRegion() == r
 		})
-	} else {
-		targetRegions = repository.AllRegionValues()
+
 	}
 
 	if len(targetRegions) == 0 {

@@ -1,6 +1,7 @@
 package meridian
 
 import (
+	redisPool "clove/internals/data/redispool"
 	"clove/internals/repository"
 	"context"
 	"encoding/json"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/redis/go-redis/v9"
 )
 
 // SaveApp saves the app info comming from the global replication, into the local redis instance
@@ -28,17 +30,16 @@ func (c *Meridian) SaveApp(ctx context.Context, app repository.App) error {
 func (c *Meridian) FetchApp(ctx context.Context, appid pgtype.UUID) (*repository.App, error) {
 
 	result := c.RedisStoreConn.Get(ctx, c.FormatAppKey(appid))
-	_, err := result.Result()
+	byts, err := result.Bytes()
 	if err != nil {
+		if err == redis.Nil {
+			return nil, redisPool.ErrCacheMiss
+		}
 		return nil, err
 	}
 
-	byts, err := result.Bytes()
-	if err != nil {
-		return nil, err
-	}
 	if len(byts) == 0 {
-		return nil, ErrCacheMiss
+		return nil, redisPool.ErrCacheMiss
 	}
 	fetchedApp := repository.App{}
 	if err = json.Unmarshal(byts, &fetchedApp); err != nil {
