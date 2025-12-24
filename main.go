@@ -39,14 +39,9 @@ func init() {
 		panic(errors.New(msg.String()))
 	}
 
-	err := dbPool.Init()
-	if err != nil {
-
-	}
-	redisPool.Client(redisPool.RedisFanout)
-	redisPool.Client(redisPool.RedisHeartbeat)
-	redisPool.Client(redisPool.RedisStore)
-	mongoDB.Client()
+	dbPool.Init()
+	redisPool.Init()
+	mongoDB.Init()
 
 }
 
