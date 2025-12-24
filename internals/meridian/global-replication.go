@@ -81,7 +81,7 @@ func (c *Meridian) PublishReplicatableAppMsgToKafka(ctx context.Context, msg Rep
 	for _, region := range targetRegions {
 		writer, exists := regionKafkaWriters[region]
 		if !exists {
-			return err
+			return fmt.Errorf("no kafka writer configured for region: %s", region)
 		}
 		err := writer.WriteMessages(ctx, kafka.Message{
 			Key:   msg.ID.Bytes[:],
@@ -98,7 +98,7 @@ func (c *Meridian) PublishReplicatableAppMsgToKafka(ctx context.Context, msg Rep
 
 // StartKafkaConsumer starts a kafka consumer that listens for app replication messages
 // and saves them to the local redis instance
-func (c *Meridian) StartKafkaToRedisBrdige(ctx context.Context) {
+func (c *Meridian) StartKafkaToRedisBridge(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
