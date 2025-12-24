@@ -241,9 +241,9 @@ func UserConnect(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	id := r.PathValue("app_id")
-	channels := r.URL.Query().Get("channel")
+	channel := r.URL.Query().Get("channel")
 
-	if len(channels) == 0 {
+	if channel == "" {
 		http.Error(w, "No channels specified", http.StatusBadRequest)
 		return
 	}
@@ -302,7 +302,7 @@ func UserConnect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	connection := NewConnection(conn, app, []string{channels})
+	connection := NewConnection(conn, app, []string{channel})
 
 	if err := connection.subscribeToChannels(ctx, meridian.Client()); err != nil {
 		log.Printf("Error subscribing to channels for app %s: %v", appID, err)
