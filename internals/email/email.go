@@ -1,10 +1,14 @@
 package email
 
-import "github.com/mailjet/mailjet-apiv3-go/v4"
+import (
+	envConsts "clove/internals/consts/env"
+	"os"
 
-const publicKey = "3eb4240fd3a39737a465193758b8a60f"
+	"github.com/mailjet/mailjet-apiv3-go/v4"
+)
 
-var secretKey = "3136fc98959d7822de0bad6f3efa9ce7"
+var publicKey = os.Getenv(string(envConsts.MAILJET_API_KEY))
+var secretKey = os.Getenv(string(envConsts.MAILJET_API_SECRETS))
 
 type Email struct {
 	Client    *mailjet.Client

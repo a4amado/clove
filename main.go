@@ -2,52 +2,38 @@ package main
 
 import (
 	envConsts "clove/internals/consts/env"
+	_ "embed"
 	"errors"
+	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
 
+//go:embed .env.example
+var envExample string
+
 // init loads a .env file when ENV equals envConsts.DEV and verifies that required Postgres, MongoDB (database name, URLs, and collection names), and Redis environment variables are set, panicking if any are missing.
 func init() {
-	if os.Getenv("ENV") == string(envConsts.DEV) {
+	if os.Getenv("ENV") != string(envConsts.PROD) {
 		err := godotenv.Load()
 		if err != nil {
 			log.Fatal("Error loading .env file")
 		}
 	}
-
-	if os.Getenv(string(envConsts.POSTGRES_DATABASE_URL)) == "" {
-		panic(errors.New(string(envConsts.POSTGRES_DATABASE_URL) + " env is missig"))
+	msg := strings.Builder{}
+	for line := range strings.SplitSeq(envExample, "\n") {
+		if strings.Index(line, "#") == 0 || len(strings.Trim(line, " ")) == 0 {
+			continue
+		}
+		if os.Getenv(line) == "" {
+			fmt.Fprintf(&msg, "%s env is missing\n", line)
+		}
 	}
-	if os.Getenv(string(envConsts.MONGO_HISTORY_DATABASE_APP_HISTORY_COLLECTION_NAME)) == "" {
-		panic(errors.New(string(envConsts.MONGO_HISTORY_DATABASE_APP_HISTORY_COLLECTION_NAME) + " env is missig"))
-
-	}
-	if os.Getenv(string(envConsts.MONGO_HISTORY_DATABASE_NAME)) == "" {
-		panic(errors.New(string(envConsts.MONGO_HISTORY_DATABASE_NAME) + " env is missig"))
-
-	}
-	if os.Getenv(string(envConsts.MONGO_HISTORY_DATABASE_URL)) == "" {
-		panic(string(envConsts.MONGO_HISTORY_DATABASE_URL) + " env is missig")
-
-	}
-	if os.Getenv(string(envConsts.MONGO_HISTORY_DATABASE_USR_HISTORY_COLLECTION_NAME)) == "" {
-		panic(errors.New(string(envConsts.MONGO_HISTORY_DATABASE_USR_HISTORY_COLLECTION_NAME) + " env is missig"))
-
-	}
-	if os.Getenv(string(envConsts.REDIS_FANOUT_URL)) == "" {
-		panic(errors.New(string(envConsts.REDIS_FANOUT_URL) + " env is missig"))
-
-	}
-	if os.Getenv(string(envConsts.REDIS_HEARTBEAT_URL)) == "" {
-		panic(errors.New(string(envConsts.REDIS_HEARTBEAT_URL) + " env is missig"))
-
-	}
-	if os.Getenv(string(envConsts.REDIS_STORE_URL)) == "" {
-		panic(errors.New(string(envConsts.REDIS_STORE_URL) + " env is missig"))
-
+	if msg.String() != "" {
+		panic(errors.New(msg.String()))
 	}
 
 }
