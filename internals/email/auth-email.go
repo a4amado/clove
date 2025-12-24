@@ -1,0 +1,48 @@
+package email
+
+import (
+	emailtemplates "clove/internals/email/email-templates"
+	"context"
+
+	"github.com/mailjet/mailjet-apiv3-go/v4"
+)
+
+type AuthEmails struct {
+	email *Email
+}
+
+type SendEmailVerificaionToken struct {
+	Token   string
+	ToEmail string
+	ToName  string
+	Title   string
+}
+
+func (e *AuthEmails) SendEmailVerificaionToken(ctx context.Context, opts SendEmailVerificaionToken) error {
+	email := emailtemplates.VerifyEmailTemplate{
+		Token: opts.Token,
+	}
+
+	_, err := e.email.Client.SendMailV31(&mailjet.MessagesV31{
+		Info: []mailjet.InfoMessagesV31{
+			{
+				To: &mailjet.RecipientsV31{
+					{
+						Email: opts.ToEmail,
+						Name:  opts.ToName,
+					},
+				},
+				From: &mailjet.RecipientV31{
+					Email: e.email.FromEmail,
+					Name:  e.email.FromName,
+				},
+				Subject:  "Verify your email",
+				HTMLPart: email.Render(),
+			},
+		},
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
