@@ -12,17 +12,15 @@ import (
 var dbPool *pgxpool.Pool
 var dbConnOnce = sync.Once{}
 
-func Init() error {
-	var ConnectionError error
+func Init() {
 	dbConnOnce.Do(func() {
 		pool, err := pgxpool.New(context.Background(), os.Getenv(string(envConsts.POSTGRES_DATABASE_URL)))
 		if err != nil {
-			ConnectionError = err
+			panic(err)
 		}
 
 		dbPool = pool
 	})
-	return ConnectionError
 }
 
 // Client returns the package's singleton PostgreSQL connection pool.
