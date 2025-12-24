@@ -55,29 +55,43 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Now validate the body
-	if body.Email == nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	if body.Email != nil && body.Password != nil {
+	if body.Email == nil && body.Password == nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	err = db.UpdateUserEmail(r.Context(), repository.UpdateUserEmailParams{
-		Email: *body.Email,
-		UserID: pgtype.UUID{
-			Bytes: userUUID,
-			Valid: true,
-		},
-	})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			w.WriteHeader(http.StatusNotFound)
+	if body.Email != nil {
+		err = db.UpdateUserEmail(r.Context(), repository.UpdateUserEmailParams{
+			Email: *body.Email,
+			UserID: pgtype.UUID{
+				Bytes: userUUID,
+				Valid: true,
+			},
+		})
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+	} else {
+		err = db.UpdateUserPassword(r.Context(), repository.UpdateUserPasswordParams{
+			UserID: pgtype.UUID{
+				Bytes: userUUID,
+				Valid: true,
+			},
+			Hash: *body.Password,
+		})
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	}
 
 	w.WriteHeader(http.StatusOK)

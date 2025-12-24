@@ -11,12 +11,12 @@ type DogPile struct {
 	Mux   sync.Mutex
 }
 
-func (d *DogPile) Increse() {
+func (d *DogPile) Increase() {
 	d.Mux.Lock()
 	defer d.Mux.Unlock()
 	d.Count = d.Count + 1
 }
-func (d *DogPile) Decrese() {
+func (d *DogPile) Decrease() {
 	d.Mux.Lock()
 	defer d.Mux.Unlock()
 	d.Count = d.Count - 1
