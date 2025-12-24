@@ -88,8 +88,11 @@ func ValidatePlan(ctx context.Context, plan repository.AppType, options ...Optio
 	for _, option := range options {
 		option(&message)
 	}
-
-	if message.messageSize > planLimits[plan].MessageSizeLimit {
+	limits, exists := planLimits[plan]
+	if !exists {
+		return errors.New("invalid plan type")
+	}
+	if message.messageSize > limits.MessageSizeLimit {
 		return ErrMessageSizeLimitExceeded
 	}
 
