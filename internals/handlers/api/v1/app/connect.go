@@ -66,6 +66,7 @@ type Connection struct {
 	subs      []*redis.PubSub
 	send      chan []byte
 	done      chan struct{}
+	wg        sync.WaitGroup
 	closeOnce sync.Once
 }
 
@@ -79,6 +80,7 @@ func NewConnection(conn *websocket.Conn, app *repository.App, channels []string)
 		subs:     make([]*redis.PubSub, 0, len(channels)),
 		send:     make(chan []byte, 256),
 		done:     make(chan struct{}),
+		wg:       sync.WaitGroup{},
 	}
 }
 
@@ -87,6 +89,7 @@ func (c *Connection) Close() error {
 	c.closeOnce.Do(func() {
 		close(c.done)
 
+		c.wg.Wait()
 		for _, sub := range c.subs {
 			if sub != nil {
 				if closeErr := sub.Close(); closeErr != nil {
@@ -179,10 +182,13 @@ func (c *Connection) subscribeToChannels(ctx context.Context, meridianClient *me
 	}
 
 	for _, channel := range c.channels {
+
 		pubSub := meridianClient.RedisFanOutConn.Subscribe(ctx, meridianClient.FormatChannelKey(appUuid, channel))
 		c.subs = append(c.subs, pubSub)
 
 		go func(ps *redis.PubSub, channelID string) {
+			c.wg.Add(1)
+			defer c.wg.Done()
 			defer func() {
 				if r := recover(); r != nil {
 					c.Close()

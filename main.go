@@ -45,7 +45,7 @@ func init() {
 		panic(errors.New(msg.String()))
 	}
 
-	// paincs on startup if any of these failed
+	// panics on startup if any of these failed
 	postgresPool.Init()
 	redisPool.Init()
 	mongoDB.Init()
