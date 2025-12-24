@@ -7,17 +7,19 @@ package repository
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const updateUserPassword = `-- name: UpdateUserPassword :exec
 UPDATE "user"
 SET "hash" = $1
-Where "id" $2
+Where "id" =  $2
 `
 
 type UpdateUserPasswordParams struct {
 	Hash   string      `json:"hash"`
-	UserID interface{} `json:"user_id"`
+	UserID pgtype.UUID `json:"user_id"`
 }
 
 func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error {

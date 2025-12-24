@@ -16,15 +16,16 @@ const insertApp = `-- name: InsertApp :one
 INSERT INTO "app"
 ("appSlug", "region", "appType", "userId", "allowedOrigins")
 values
-($1, $2, $3, $4, allowedOrigins)
+($1, $2, $3, $4, $5)
 RETURNING id, "appSlug", region, "appType", "userId", "allowedOrigins"
 `
 
 type InsertAppParams struct {
-	Appslug string      `json:"appslug"`
-	Region  []Region    `json:"region"`
-	Apptype AppType     `json:"apptype"`
-	Userid  pgtype.UUID `json:"userid"`
+	Appslug        string      `json:"appslug"`
+	Region         []Region    `json:"region"`
+	Apptype        AppType     `json:"apptype"`
+	Userid         pgtype.UUID `json:"userid"`
+	Allowedorigins []string    `json:"allowedorigins"`
 }
 
 // "id" UUID PRIMARY KEY NOT NULL DEFAULT uuid_generate_v4(),
@@ -37,6 +38,7 @@ func (q *Queries) InsertApp(ctx context.Context, arg InsertAppParams) (App, erro
 		arg.Region,
 		arg.Apptype,
 		arg.Userid,
+		arg.Allowedorigins,
 	)
 	var i App
 	err := row.Scan(

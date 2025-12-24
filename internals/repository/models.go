@@ -64,74 +64,11 @@ func (e AppType) Valid() bool {
 	return false
 }
 
-// AllAppTypeValues returns a slice of all defined AppType constants.
 func AllAppTypeValues() []AppType {
 	return []AppType{
 		AppTypeFree,
 		AppTypeStandard,
 		AppTypePro,
-	}
-}
-
-type Changeoperation string
-
-const (
-	ChangeoperationINSERT Changeoperation = "INSERT"
-	ChangeoperationDELETE Changeoperation = "DELETE"
-	ChangeoperationUPDATE Changeoperation = "UPDATE"
-)
-
-func (e *Changeoperation) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = Changeoperation(s)
-	case string:
-		*e = Changeoperation(s)
-	default:
-		return fmt.Errorf("unsupported scan type for Changeoperation: %T", src)
-	}
-	return nil
-}
-
-type NullChangeoperation struct {
-	Changeoperation Changeoperation `json:"changeoperation"`
-	Valid           bool            `json:"valid"` // Valid is true if Changeoperation is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullChangeoperation) Scan(value interface{}) error {
-	if value == nil {
-		ns.Changeoperation, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.Changeoperation.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullChangeoperation) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.Changeoperation), nil
-}
-
-func (e Changeoperation) Valid() bool {
-	switch e {
-	case ChangeoperationINSERT,
-		ChangeoperationDELETE,
-		ChangeoperationUPDATE:
-		return true
-	}
-	return false
-}
-
-// AllChangeoperationValues returns a slice of all defined Changeoperation constants.
-func AllChangeoperationValues() []Changeoperation {
-	return []Changeoperation{
-		ChangeoperationINSERT,
-		ChangeoperationDELETE,
-		ChangeoperationUPDATE,
 	}
 }
 
@@ -184,7 +121,6 @@ func (e Region) Valid() bool {
 	return false
 }
 
-// AllRegionValues returns a slice containing every defined Region constant.
 func AllRegionValues() []Region {
 	return []Region{
 		RegionDk1,
@@ -206,16 +142,4 @@ type User struct {
 	Hash      string           `json:"hash"`
 	CreatedAt pgtype.Timestamp `json:"created_at"`
 	UpdatedAt pgtype.Timestamp `json:"updated_at"`
-}
-
-type UserHistory struct {
-	ID        pgtype.UUID      `json:"id"`
-	UserId    pgtype.UUID      `json:"user_id"`
-	Email     string           `json:"email"`
-	Hash      string           `json:"hash"`
-	CreatedAt pgtype.Timestamp `json:"created_at"`
-	UpdatedAt pgtype.Timestamp `json:"updated_at"`
-	ChangedAt pgtype.Timestamp `json:"changed_at"`
-	ChangedBy pgtype.UUID      `json:"changed_by"`
-	Operation Changeoperation  `json:"operation"`
 }

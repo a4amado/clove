@@ -7,17 +7,19 @@ package repository
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const updateUserEmail = `-- name: UpdateUserEmail :exec
 UPDATE "user"
 SET "email" = $1
-Where "id" $2
+Where "id" = $2
 `
 
 type UpdateUserEmailParams struct {
 	Email  string      `json:"email"`
-	UserID interface{} `json:"user_id"`
+	UserID pgtype.UUID `json:"user_id"`
 }
 
 func (q *Queries) UpdateUserEmail(ctx context.Context, arg UpdateUserEmailParams) error {
