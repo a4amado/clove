@@ -1,6 +1,7 @@
 package meridian
 
 import (
+	envConsts "clove/internals/consts/env"
 	"clove/internals/repository"
 	"context"
 	"encoding/json"
@@ -24,7 +25,7 @@ func (m *ReplicatableAppMsg) MarshalJSON() ([]byte, error) {
 
 var regionKafkaWriters = map[repository.Region]*kafka.Writer{
 	repository.RegionDk1: {
-		Addr:                   kafka.TCP("kafka.vps.webdock.cloud"),
+		Addr:                   kafka.TCP(os.Getenv(string(envConsts.KAFKA_BOOTSTRAP))),
 		Topic:                  fmt.Sprintf("%s-app-replication", repository.RegionDk1),
 		Balancer:               &kafka.RoundRobin{},
 		MaxAttempts:            3,
@@ -38,11 +39,8 @@ var regionKafkaWriters = map[repository.Region]*kafka.Writer{
 // getCurrentMachineRegion returns the region for the current machine as a repository.Region.
 // In non-production environments it defaults the configured region to "dk1". It panics if the derived region is not valid.
 func getCurrentMachineRegion() repository.Region {
-	if os.Getenv("env") != "prod" {
-		os.Setenv("region", "dk1")
-	}
 
-	region := os.Getenv("region")
+	region := os.Getenv(string(envConsts.REGION))
 	parsedRegion := repository.Region(region)
 	// if no region is set, panic
 	if !parsedRegion.Valid() {
@@ -51,18 +49,8 @@ func getCurrentMachineRegion() repository.Region {
 	return parsedRegion
 }
 
-// getCurrentMachineID provides the current machine identifier from the environment.
-// When the environment variable "env" is not "prod", it sets "machine_id" to "1" before returning the value of "machine_id".
-func getCurrentMachineID() string {
-	if os.Getenv("env") != "prod" {
-		os.Setenv("machine_id", "1")
-	}
-	machineID := os.Getenv("machine_id")
-	return machineID
-}
-
 var ReplicatableAppMsgReader = kafka.NewReader(kafka.ReaderConfig{
-	Brokers: []string{"kafka.vps.webdock.cloud"},
+	Brokers: []string{os.Getenv(string(envConsts.KAFKA_BOOTSTRAP))},
 	Topic:   fmt.Sprintf("%s-app-replication", getCurrentMachineRegion()),
 	GroupID: fmt.Sprintf("%s-app-replication-group", getCurrentMachineRegion()),
 })
