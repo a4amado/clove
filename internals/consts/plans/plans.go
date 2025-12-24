@@ -55,20 +55,30 @@ type Option func(*planOptions)
 
 // WithAppID sets the application ID for plan limit checking.
 // When appId is provided, MonthlyMessageLimit and ConcurrentConnectionsLimit are enforced.
-// When appId is nil, only MessageSizeLimit is enforced.
+// WithAppID returns an Option that sets the application ID used during plan validation.
+// When an app ID is provided, monthly message and concurrent connection limits will be enforced.
 func WithAppID(appId pgtype.UUID) Option {
 	return func(options *planOptions) {
 		options.appId = &appId
 	}
 }
 
-// message size in bytes
+// WithMessageSize returns an Option that sets the message size (in bytes) on a planOptions instance.
 func WithMessageSize(size uint32) Option {
 	return func(options *planOptions) {
 		options.messageSize = size
 	}
 }
 
+// ValidatePlan validates the given plan against configured limits using the provided options.
+// It enforces the plan's message size limit and, when an application ID is supplied and the plan
+// defines a finite monthly limit, is intended to also enforce monthly message and concurrent
+// connections limits (those checks are not implemented yet).
+//
+// The function panics if no options are provided.
+//
+// Returns ErrMessageSizeLimitExceeded when the supplied message size exceeds the plan's limit,
+// or nil when validation passes.
 func ValidatePlan(ctx context.Context, plan repository.AppType, options ...Option) error {
 
 	if len(options) == 0 {

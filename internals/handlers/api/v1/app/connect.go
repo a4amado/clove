@@ -30,6 +30,8 @@ const (
 	maxMessageSize = 512 * 1024
 )
 
+// newUpgrader creates a websocket.Upgrader configured with buffer sizes based on the app's type and an origin check using the app's AllowedOrigins.
+// The upgrader's CheckOrigin lowercases the request Origin header and allows the request only if it matches an entry in app.AllowedOrigins, which must be pre-normalized to lowercase.
 func newUpgrader(app *repository.App) websocket.Upgrader {
 	bufferSize := appConsts.GetAppBufferSize(app.AppType)
 
@@ -66,6 +68,8 @@ type Connection struct {
 	closeOnce sync.Once
 }
 
+// NewConnection creates a Connection for the given WebSocket and app, initialized to subscribe to the provided channels.
+// The returned Connection has a buffered send channel, a done channel for shutdown signaling, and a pre-sized subscription slice.
 func NewConnection(conn *websocket.Conn, app *repository.App, channels []string) *Connection {
 	return &Connection{
 		conn:     conn,
@@ -211,6 +215,15 @@ func (c *Connection) subscribeToChannels(ctx context.Context, meridianClient *me
 
 	return nil
 }
+// UserConnect upgrades the incoming HTTP request to a WebSocket for the specified app
+// and subscribes the resulting connection to the requested channel(s).
+//
+// It validates the "app_id" path parameter and the "channel" query parameter, attempts
+// to load the app configuration from cache and falls back to the database (caching
+// the DB result asynchronously on success). It replies with HTTP 400 for missing or
+// invalid parameters, 404 if the app is not found, and 500 on internal errors.
+// After a successful upgrade it subscribes the connection to Redis channels and starts
+// the connection's read/write pumps; subscription failures close the connection.
 func UserConnect(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 

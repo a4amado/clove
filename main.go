@@ -9,6 +9,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// init loads a .env file when ENV equals envConsts.DEV and verifies that required Postgres, MongoDB (database name, URLs, and collection names), and Redis environment variables are set, panicking if any are missing.
 func init() {
 	if os.Getenv("ENV") == string(envConsts.DEV) {
 		err := godotenv.Load()
@@ -51,6 +52,8 @@ func init() {
 
 }
 
+// main is the program entry point.
+// It is intentionally empty.
 func main() {
 
 }
