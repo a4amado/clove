@@ -36,7 +36,7 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 	user_id := r.PathValue("user_id")
 	userUUID, err := uuid.Parse(user_id)
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
