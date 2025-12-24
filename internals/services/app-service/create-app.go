@@ -21,7 +21,7 @@ func (appService *AppService) CreateUser(ctx context.Context, p repository.Inser
 	if err != nil {
 		var pgErrpr *pgconn.PgError
 		if errors.As(err, &pgErrpr) {
-			if pgErrpr.Code == pgerrcode.UniqueViolation && pgErrpr.ColumnName == "email" {
+			if pgErrpr.Code == pgerrcode.UniqueViolation {
 				return nil, fmt.Errorf("email '%s' is already registerd", p.Email)
 			}
 		}
