@@ -32,10 +32,8 @@ var redisFanoutConnOnce = sync.Once{}
 var redisHeartbeatConn *goRedis.Client
 var redisHeartbeatConnOnce = sync.Once{}
 
-func Client(pool RedisDB) *goRedis.Client {
-
-	switch pool {
-	case RedisStore:
+func Init() {
+	go func() {
 		connString := os.Getenv(string(envConsts.REDIS_STORE_URL))
 		redisStoreConnOnce.Do(func() {
 			opts, err := goRedis.ParseURL(connString)
@@ -44,8 +42,8 @@ func Client(pool RedisDB) *goRedis.Client {
 			}
 			redisStoreConn = goRedis.NewClient(opts)
 		})
-		return redisStoreConn
-	case RedisFanout:
+	}()
+	go func() {
 		connString := os.Getenv(string(envConsts.REDIS_FANOUT_URL))
 		redisFanoutConnOnce.Do(func() {
 			opts, err := goRedis.ParseURL(connString)
@@ -54,8 +52,8 @@ func Client(pool RedisDB) *goRedis.Client {
 			}
 			redisFanoutConn = goRedis.NewClient(opts)
 		})
-		return redisFanoutConn
-	case RedisHeartbeat:
+	}()
+	go func() {
 		connString := os.Getenv(string(envConsts.REDIS_HEARTBEAT_URL))
 		redisHeartbeatConnOnce.Do(func() {
 			opts, err := goRedis.ParseURL(connString)
@@ -64,9 +62,19 @@ func Client(pool RedisDB) *goRedis.Client {
 			}
 			redisHeartbeatConn = goRedis.NewClient(opts)
 		})
+	}()
+}
+func Client(pool RedisDB) *goRedis.Client {
+
+	switch pool {
+	case RedisStore:
+		return redisStoreConn
+	case RedisFanout:
+		return redisFanoutConn
+	case RedisHeartbeat:
 		return redisHeartbeatConn
 	default:
-		panic(errors.New("wrong redid conn pool type"))
+		panic(errors.New("wrong redis conn pool type"))
 	}
 
 }
