@@ -121,11 +121,13 @@ func (c *Connection) writePump() {
 			if !ok {
 
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				c.Close()
 				return
 			}
 
 			if err := c.writeMessage(websocket.BinaryMessage, message); err != nil {
 				log.Printf("Error writing message: %v", err)
+
 				return
 			}
 
@@ -183,6 +185,7 @@ func (c *Connection) subscribeToChannels(ctx context.Context, meridianClient *me
 		go func(ps *redis.PubSub, channelID string) {
 			defer func() {
 				if r := recover(); r != nil {
+					c.Close()
 					log.Printf("Recovered from panic in subscription goroutine: %v", r)
 				}
 			}()
@@ -193,6 +196,7 @@ func (c *Connection) subscribeToChannels(ctx context.Context, meridianClient *me
 				case message, ok := <-ch:
 					if !ok {
 						log.Printf("Channel closed for %s", channelID)
+						c.Close()
 						return
 					}
 
@@ -209,6 +213,7 @@ func (c *Connection) subscribeToChannels(ctx context.Context, meridianClient *me
 
 				case <-c.done:
 					return
+
 				}
 			}
 		}(pubSub, channel)
