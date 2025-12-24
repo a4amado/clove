@@ -2,8 +2,8 @@ package main
 
 import (
 	envConsts "clove/internals/consts/env"
-	dbPool "clove/internals/data/database/pool"
 	mongoDB "clove/internals/data/mongo"
+	postgresPool "clove/internals/data/postgres/pool"
 	redisPool "clove/internals/data/redispool"
 	emailTemplates "clove/internals/email/email-templates"
 	_ "embed"
@@ -32,15 +32,21 @@ func init() {
 		if strings.Index(line, "#") == 0 || len(strings.Trim(line, " ")) == 0 {
 			continue
 		}
-		if os.Getenv(line) == "" {
-			fmt.Fprintf(&msg, "%s env is missing\n", line)
+		varName := line
+		if idx := strings.Index(line, "="); idx > 0 {
+			varName = line[:idx]
+		}
+		varName = strings.TrimSpace(varName)
+		if os.Getenv(varName) == "" {
+			fmt.Fprintf(&msg, "%s env is missing\n", varName)
 		}
 	}
 	if msg.String() != "" {
 		panic(errors.New(msg.String()))
 	}
 
-	dbPool.Init()
+	// paincs on startup if any of these failed
+	postgresPool.Init()
 	redisPool.Init()
 	mongoDB.Init()
 	emailTemplates.Init()

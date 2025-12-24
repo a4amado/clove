@@ -1,9 +1,8 @@
-package dbPool
+package postgresPool
 
 import (
 	envConsts "clove/internals/consts/env"
 	"context"
-	"errors"
 	"os"
 	"sync"
 
@@ -30,8 +29,6 @@ func Init() error {
 // It lazily initializes the pool on first call using the POSTGRES_DATABASE_URL
 // environment variable and panics if pool creation fails.
 func Client() *pgxpool.Pool {
-	if dbPool == nil {
-		panic(errors.New("dbPool has not been initialized"))
-	}
+	Init()
 	return dbPool
 }

@@ -1,7 +1,7 @@
 package UserHandlersV1
 
 import (
-	dbPool "clove/internals/data/database/pool"
+	dbPool "clove/internals/data/postgres/pool"
 	"clove/internals/repository"
 	"encoding/json"
 	"errors"

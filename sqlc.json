@@ -3,8 +3,8 @@
     "sql": [
         {
             "engine": "postgresql",
-            "queries": "internals/data/database/query/**",
-            "schema": "internals/data/database/schema/**",
+            "queries": "internals/data/postgres/query/**",
+            "schema": "internals/data/postgres/schema/**",
             "gen": {
                 "go": {
                     "package": "repository",

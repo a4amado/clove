@@ -2,7 +2,7 @@ package AppHandlersV1
 
 import (
 	appConsts "clove/internals/consts/app"
-	dbPool "clove/internals/data/database/pool"
+	dbPool "clove/internals/data/postgres/pool"
 	redisPool "clove/internals/data/redispool"
 	headers "clove/internals/handlers/api/response-utils/consts"
 	"clove/internals/meridian"
@@ -43,7 +43,7 @@ func newUpgrader(app *repository.App) websocket.Upgrader {
 			allowed := set.From(app.AllowedOrigins)
 			// this works under the assumption that app.AllowedOrigins are normalized on insert
 			origin := strings.ToLower(r.Header.Get(headers.Origin))
-			// make sure the request is comming from the authrized domain
+			// make sure the request is coming from the authrized domain
 			return allowed.Contains(origin)
 		},
 	}
