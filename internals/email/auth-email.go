@@ -11,14 +11,14 @@ type AuthEmails struct {
 	email *Email
 }
 
-type SendEmailVerificaionToken struct {
+type SendEmailVerificationToken struct {
 	Token   string
 	ToEmail string
 	ToName  string
 	Title   string
 }
 
-func (e *AuthEmails) SendEmailVerificaionToken(ctx context.Context, opts SendEmailVerificaionToken) error {
+func (e *AuthEmails) SendEmailVerificaionToken(ctx context.Context, opts SendEmailVerificationToken) error {
 	email := emailTemplates.VerifyEmailTemplate{
 		Token: opts.Token,
 	}
