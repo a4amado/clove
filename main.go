@@ -5,6 +5,7 @@ import (
 	dbPool "clove/internals/data/database/pool"
 	mongoDB "clove/internals/data/mongo"
 	redisPool "clove/internals/data/redispool"
+	emailTemplates "clove/internals/email/email-templates"
 	_ "embed"
 	"errors"
 	"fmt"
@@ -42,7 +43,7 @@ func init() {
 	dbPool.Init()
 	redisPool.Init()
 	mongoDB.Init()
-
+	emailTemplates.Init()
 }
 
 // main is the program entry point.

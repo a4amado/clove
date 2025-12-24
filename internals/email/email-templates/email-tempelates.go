@@ -1,9 +1,10 @@
-package emailtemplates
+package emailTemplates
 
 import (
 	"bytes"
 	"embed"
 	_ "embed"
+	"errors"
 	"fmt"
 	"sync"
 	"text/template"
@@ -19,7 +20,7 @@ var templates *template.Template
 //
 // It runs the initialization exactly once (safe for concurrent callers) and assigns the parsed templates to the package-level `templates` variable.
 // The function will panic if template parsing fails.
-func render_init() {
+func Init() {
 	once.Do(func() {
 		templates = template.Must(template.ParseFS(fs, "*.tmpl"))
 	})
@@ -40,7 +41,9 @@ func (d *VerifyEmailTemplate) formatEmailverificationURL(token string) string {
 }
 
 func (d *VerifyEmailTemplate) Render() (*string, error) {
-	render_init()
+	if templates == nil {
+		panic(errors.New("email templates has not been initialized"))
+	}
 	buf := new(bytes.Buffer)
 	err := templates.ExecuteTemplate(buf, "verify-email.tmpl", map[string]string{
 		"verification_url": d.formatEmailverificationURL(d.Token),

@@ -1,7 +1,7 @@
 package email
 
 import (
-	emailtemplates "clove/internals/email/email-templates"
+	emailTemplates "clove/internals/email/email-templates"
 	"context"
 
 	"github.com/mailjet/mailjet-apiv3-go/v4"
@@ -19,7 +19,7 @@ type SendEmailVerificaionToken struct {
 }
 
 func (e *AuthEmails) SendEmailVerificaionToken(ctx context.Context, opts SendEmailVerificaionToken) error {
-	email := emailtemplates.VerifyEmailTemplate{
+	email := emailTemplates.VerifyEmailTemplate{
 		Token: opts.Token,
 	}
 	emailHtml, err := email.Render()
