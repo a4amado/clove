@@ -186,7 +186,7 @@ func (c *Connection) subscribeToChannels(ctx context.Context, meridianClient *me
 			defer func() {
 				if r := recover(); r != nil {
 					c.Close()
-					log.Printf("Recovered from panic in subscription goroutine: %v", r)
+					log.Printf("recovered from panic in subscription goroutine: %v", r)
 				}
 			}()
 
