@@ -64,6 +64,7 @@ func (e AppType) Valid() bool {
 	return false
 }
 
+// AllAppTypeValues returns a slice of all defined AppType constants.
 func AllAppTypeValues() []AppType {
 	return []AppType{
 		AppTypeFree,
@@ -125,6 +126,7 @@ func (e Changeoperation) Valid() bool {
 	return false
 }
 
+// AllChangeoperationValues returns a slice of all defined Changeoperation constants.
 func AllChangeoperationValues() []Changeoperation {
 	return []Changeoperation{
 		ChangeoperationINSERT,
@@ -182,6 +184,7 @@ func (e Region) Valid() bool {
 	return false
 }
 
+// AllRegionValues returns a slice containing every defined Region constant.
 func AllRegionValues() []Region {
 	return []Region{
 		RegionDk1,

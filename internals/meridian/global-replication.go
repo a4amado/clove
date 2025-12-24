@@ -35,6 +35,8 @@ var regionKafkaWriters = map[repository.Region]*kafka.Writer{
 	},
 }
 
+// getCurrentMachineRegion returns the region for the current machine as a repository.Region.
+// In non-production environments it defaults the configured region to "dk1". It panics if the derived region is not valid.
 func getCurrentMachineRegion() repository.Region {
 	if os.Getenv("env") != "prod" {
 		os.Setenv("region", "dk1")
@@ -49,6 +51,8 @@ func getCurrentMachineRegion() repository.Region {
 	return parsedRegion
 }
 
+// getCurrentMachineID provides the current machine identifier from the environment.
+// When the environment variable "env" is not "prod", it sets "machine_id" to "1" before returning the value of "machine_id".
 func getCurrentMachineID() string {
 	if os.Getenv("env") != "prod" {
 		os.Setenv("machine_id", "1")

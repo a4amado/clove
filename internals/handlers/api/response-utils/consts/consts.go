@@ -150,7 +150,8 @@ const (
 	CacheControlPrivate        = "private"
 )
 
-// MaxAge returns a Cache-Control max-age directive
+// MaxAge returns a Cache-Control `max-age` directive using the provided seconds value.
+// The seconds value is used as the directive's duration in seconds.
 func MaxAge(seconds int) string {
 	return fmt.Sprintf("max-age=%d", seconds)
 }

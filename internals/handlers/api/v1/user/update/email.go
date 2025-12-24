@@ -22,6 +22,13 @@ type UpdateUserBody struct {
 	Password *string
 }
 
+// UpdateUser handles HTTP requests to update a user's email identified by the `user_id` path parameter.
+// 
+// It validates that `user_id` is a UUID, rejects request bodies larger than 1MB with 413, and decodes a JSON
+// payload into UpdateUserBody. The request must include `Email` and must not include both `Email` and `Password`
+// at the same time; otherwise it responds 400. On success it updates the user's email via the repository and
+// returns 200 with a JSON confirmation message. If the user is not found it returns 404; other repository errors
+// result in 500.
 func UpdateUser(w http.ResponseWriter, r *http.Request) {
 	// this endpoint will always return json
 	w.Header().Add(httpheaders.ContentType, mediatypes.ApplicationJson)

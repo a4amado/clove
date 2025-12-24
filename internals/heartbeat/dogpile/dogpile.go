@@ -26,6 +26,7 @@ func (d *DogPile) GetNumberOfConnections() uint64 {
 	return d.Count
 }
 
+// New creates a DogPile with Count set to 0 and an unlocked mutex.
 func New() DogPile {
 	return DogPile{
 		Count: 0,

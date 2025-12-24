@@ -32,6 +32,9 @@ type Meridian struct {
 var meridianOnce *Meridian
 var once = sync.Once{}
 
+// Client returns the singleton Meridian instance with role-specific Redis connections
+// (store, fan-out, heartbeat) initialized from the package redisPool.
+// Initialization is performed exactly once and is safe for concurrent use.
 func Client() *Meridian {
 	once.Do(func() {
 		meridianOnce = &Meridian{

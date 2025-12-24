@@ -47,6 +47,7 @@ func (*HeartbeatStatus) Run() {
 	}
 
 }
+// New creates a new HeartbeatStatus used to report machine resource usage (CPU and RAM).
 func New() *HeartbeatStatus {
 	return &HeartbeatStatus{}
 }

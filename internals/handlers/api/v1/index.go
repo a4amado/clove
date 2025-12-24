@@ -8,6 +8,8 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+// V1Routes creates a chi.Router configured with the v1 API subroutes.
+// The returned router mounts the v1 auth, user, and app handlers at /auth, /user, and /app respectively.
 func V1Routes() chi.Router {
 	r := chi.NewRouter()
 

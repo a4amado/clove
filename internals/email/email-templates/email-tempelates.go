@@ -15,6 +15,10 @@ var fs embed.FS
 var once = &sync.Once{}
 var templates *template.Template
 
+// render_init initializes the package's template set by parsing all `*.tmpl` files from the embedded filesystem.
+// 
+// It runs the initialization exactly once (safe for concurrent callers) and assigns the parsed templates to the package-level `templates` variable.
+// The function will panic if template parsing fails.
 func render_init() {
 	once.Do(func() {
 		templates = template.Must(template.ParseFS(fs, "*.tmpl"))

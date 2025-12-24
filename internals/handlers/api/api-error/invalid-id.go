@@ -11,6 +11,9 @@ type ApiErrorResponse struct {
 	Message string   `json:"message"`
 }
 
+// FormatErrorJSON formats an ApiError and message into a JSON-encoded error response string.
+// The returned string is the JSON encoding of ApiErrorResponse{Error: apiError, Message: message}.
+// It panics if JSON encoding fails.
 func FormatErrorJSON(apiError ApiError, message string) string {
 	buf := new(bytes.Buffer)
 	err := json.NewEncoder(buf).Encode(ApiErrorResponse{
