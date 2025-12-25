@@ -66,7 +66,12 @@ func (m *MessageToClient) Binary() ([]byte, error) {
 // the DB result asynchronously on success). It replies with HTTP 400 for missing or
 // invalid parameters, 404 if the app is not found, and 500 on internal errors.
 // After a successful upgrade it subscribes the connection to Redis channels and starts
-// the connection's read/write pumps; subscription failures close the connection.
+// UserConnect upgrades an HTTP request to a WebSocket, subscribes that connection to the app's fanout channel, and forwards channel messages to the client.
+// 
+// The request must include an `app_id` path parameter parsable as a UUID and may include a `channel` query parameter to select the fanout channel.
+// On failure to parse `app_id` the handler responds with 400; if the app does not exist it responds with 404; cache or database errors produce 500.
+// When the app is fetched from the database it is saved to the replication cache asynchronously.
+// The WebSocket is closed and the handler returns if the subscription channel closes, the client write fails, or the request context is cancelled.
 func UserConnect(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 

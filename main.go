@@ -26,7 +26,7 @@ import (
 var envExample string
 
 // main is the program entry point.
-// It is intentionally empty.
+// main initializes configuration, prepares datastore and service clients, starts replication/fanout bridges and background publishers, creates and replicates a test user and app, mounts API routes, and starts the HTTP server on :3000.
 func main() {
 	// Load config FIRST - make it obvious
 	if err := godotenv.Load(); err != nil {

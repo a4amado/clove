@@ -26,6 +26,13 @@ type AppReplication struct {
 var replicationOnce = sync.Once{}
 var replication *AppReplication
 
+// ReplicateApp initializes and returns the singleton AppReplication instance.
+// It loads environment from .env, reads REGION and KAFKA_BOOTSTRAP, and configures
+// Redis and Kafka reader/writers for local and cross-region replication.
+// The first call performs one-time initialization; subsequent calls return the same instance.
+// It panics if KAFKA_BOOTSTRAP is unset or REGION is invalid.
+// The returned *AppReplication is configured with a local Kafka reader for "<region>-app-replication",
+// a local Kafka writer targeted at RegionDk1, a pre-populated crossRegionWriters map, and a Redis client.
 func ReplicateApp() *AppReplication {
 	replicationOnce.Do(func() {
 		godotenv.Load()

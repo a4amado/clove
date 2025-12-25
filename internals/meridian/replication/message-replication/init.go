@@ -26,6 +26,10 @@ type MessageReplication struct {
 var MessageReplicationOnce = sync.Once{}
 var replication *MessageReplication
 
+// ReplicateMessage initializes and returns the singleton MessageReplication used for cross-region message replication.
+// It loads REGION and KAFKA_BOOTSTRAP from the environment, panics if REGION is invalid or KAFKA_BOOTSTRAP is unset.
+// Initialization is performed once and configures the Redis fanout client, a local Kafka reader for the region's replication topic,
+// and Kafka writers for local and cross-region replication.
 func ReplicateMessage() *MessageReplication {
 
 	godotenv.Load()

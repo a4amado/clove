@@ -17,6 +17,8 @@ type FanOut struct {
 var fanoutOnce = sync.Once{}
 var fanout *FanOut
 
+// Fanout returns the package-level singleton FanOut, initializing it once with the Redis fanout client from the connection pool.
+// The returned *FanOut holds the Redis client used for publish/subscribe operations.
 func Fanout() *FanOut {
 	fanoutOnce.Do(func() {
 		fanout = &FanOut{
