@@ -17,7 +17,8 @@
 package meridian
 
 import (
-	redisPool "clove/internals/data/redispool"
+	"clove/internals/meridian/fanout"
+	"clove/internals/meridian/replication"
 	"sync"
 
 	"github.com/redis/go-redis/v9"
@@ -37,11 +38,15 @@ var once = sync.Once{}
 // Initialization is performed exactly once and is safe for concurrent use.
 func Client() *Meridian {
 	once.Do(func() {
-		meridianOnce = &Meridian{
-			RedisStoreConn:    redisPool.Client(redisPool.RedisStore),
-			RedisFanOutConn:   redisPool.Client(redisPool.RedisFanout),
-			RedisHearbeatConn: redisPool.Client(redisPool.RedisHeartbeat),
-		}
+		meridianOnce = &Meridian{}
 	})
 	return meridianOnce
+}
+
+func (m *Meridian) Fanout() *fanout.FanOut {
+	return fanout.Fanout()
+}
+
+func (m *Meridian) Replicate() *replication.Replication {
+	return replication.Replicate()
 }

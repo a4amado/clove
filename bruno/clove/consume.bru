@@ -1,0 +1,19 @@
+meta {
+  name: consume
+  type: ws
+  seq: 1
+}
+
+ws {
+  url: localhost:3000/api/v1/app/0b375e80-a67e-450b-bb81-6a21cc5fee7b/ws
+  body: ws
+  auth: inherit
+}
+
+body:ws {
+  name: message 1
+  type: json
+  content: '''
+    {}
+  '''
+}

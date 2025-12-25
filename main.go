@@ -1,59 +1,81 @@
 package main
 
 import (
-	envConsts "clove/internals/consts/env"
 	mongoDB "clove/internals/data/mongo"
 	postgresPool "clove/internals/data/postgres/pool"
 	redisPool "clove/internals/data/redispool"
 	emailTemplates "clove/internals/email/email-templates"
+	Api "clove/internals/handlers/api"
+	"clove/internals/meridian"
+	"clove/internals/repository"
+	"context"
 	_ "embed"
-	"errors"
 	"fmt"
 	"log"
-	"os"
-	"strings"
+	"net/http"
+	"time"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 )
 
 //go:embed .env.example
 var envExample string
 
-// init loads a .env file when ENV equals envConsts.DEV and verifies that required Postgres, MongoDB (database name, URLs, and collection names), and Redis environment variables are set, panicking if any are missing.
-func init() {
-	if os.Getenv("ENV") != string(envConsts.PROD) {
-		err := godotenv.Load()
-		if err != nil {
-			log.Fatal("Error loading .env file")
-		}
-	}
-	msg := strings.Builder{}
-	for line := range strings.SplitSeq(envExample, "\n") {
-		if strings.Index(line, "#") == 0 || len(strings.Trim(line, " ")) == 0 {
-			continue
-		}
-		varName := line
-		if idx := strings.Index(line, "="); idx > 0 {
-			varName = line[:idx]
-		}
-		varName = strings.TrimSpace(varName)
-		if os.Getenv(varName) == "" {
-			fmt.Fprintf(&msg, "%s env is missing\n", varName)
-		}
-	}
-	if msg.String() != "" {
-		panic(errors.New(msg.String()))
+// main is the program entry point.
+// It is intentionally empty.
+func main() {
+	// Load config FIRST - make it obvious
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("Failed to load .env:", err)
 	}
 
-	// panics on startup if any of these failed
 	postgresPool.Init()
 	redisPool.Init()
 	mongoDB.Init()
 	emailTemplates.Init()
-}
 
-// main is the program entry point.
-// It is intentionally empty.
-func main() {
+	replicate := meridian.Client().Replicate()
 
+	fanout := meridian.Client().Fanout()
+
+	go replicate.StartKafkaToRedisBridge(context.Background())
+	user, err := repository.New(postgresPool.Client()).InsertUser(context.Background(), repository.InsertUserParams{
+		Email: uuid.NewString() + "a4addel@gmail.com",
+		Hash:  "ssssssssssssssssss",
+	})
+	if err != nil {
+		panic(err)
+	}
+	app, err := repository.New(postgresPool.Client()).InsertApp(context.Background(), repository.InsertAppParams{
+		Appslug: uuid.NewString() + "test",
+		Region:  []repository.Region{repository.RegionDk1},
+		Apptype: repository.AppTypeFree,
+		Userid:  user.ID,
+	})
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(app.ID.String())
+
+	err = replicate.SaveApp(context.Background(), app)
+	if err != nil {
+		panic(err)
+	}
+
+	go func() {
+		t := time.NewTicker(time.Second)
+		for {
+			<-t.C
+			fmt.Println("sss")
+
+			fanout.Publish(context.Background(), fanout.FormatChannelKey(uuid.UUID(app.ID.Bytes), "test"), "test")
+		}
+
+	}()
+	chi := chi.NewMux()
+	chi.Mount("/api/", Api.Routes())
+	fmt.Println("listening at :3000")
+	http.ListenAndServe(":3000", chi)
 }

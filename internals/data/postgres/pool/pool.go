@@ -3,10 +3,13 @@ package postgresPool
 import (
 	envConsts "clove/internals/consts/env"
 	"context"
+	"fmt"
 	"os"
 	"sync"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/joho/godotenv"
 )
 
 var dbPool *pgxpool.Pool
@@ -14,9 +17,36 @@ var dbConnOnce = sync.Once{}
 
 func Init() {
 	dbConnOnce.Do(func() {
-		pool, err := pgxpool.New(context.Background(), os.Getenv(string(envConsts.POSTGRES_DATABASE_URL)))
+		godotenv.Load()
+		fmt.Println("ENVVVVVVVVV", os.Getenv(string(envConsts.POSTGRES_DATABASE_URL)))
+		config, _ := pgxpool.ParseConfig(os.Getenv(string(envConsts.POSTGRES_DATABASE_URL)))
+		config.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
+			// Load the base enum
+			regionType, err := conn.LoadType(ctx, "region")
+			if err != nil {
+				return fmt.Errorf("failed to load region type: %w", err)
+			}
+			conn.TypeMap().RegisterType(regionType)
+
+			// Load the array type (note the underscore prefix)
+			regionArrayType, err := conn.LoadType(ctx, "_region")
+			if err != nil {
+				return fmt.Errorf("failed to load _region type: %w", err)
+			}
+			conn.TypeMap().RegisterType(regionArrayType)
+
+			// Do the same for app_type if you use it in queries
+			appType, err := conn.LoadType(ctx, "app_type")
+			if err != nil {
+				return fmt.Errorf("failed to load app_type: %w", err)
+			}
+			conn.TypeMap().RegisterType(appType)
+
+			return nil
+		}
+		pool, err := pgxpool.NewWithConfig(context.Background(), config)
 		if err != nil {
-			panic(err)
+
 		}
 
 		dbPool = pool

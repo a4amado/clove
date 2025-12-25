@@ -15,7 +15,7 @@ func V1Routes() chi.Router {
 
 	r.Mount("/auth", AuthHandlersV1.Routes())
 	r.Mount("/user", UserHandlersV1.Routes())
-	r.Mount("/app", AppHandlersV1.Routes())
+	r.Mount("/apps", AppHandlersV1.Routes())
 
 	return r
 }
