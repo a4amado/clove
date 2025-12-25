@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"slices"
 
 	"github.com/segmentio/kafka-go"
 )
@@ -17,15 +16,6 @@ type ReplicatableAppMsg struct {
 
 func (m *ReplicatableAppMsg) MarshalJSON() ([]byte, error) {
 	return json.Marshal(ReplicatableAppMsg{App: m.App})
-}
-
-// getCurrentMachineRegion returns the current machine's region.
-// Panics if Init() has not been called.
-func (m *AppReplication) getCurrentMachineRegion() repository.Region {
-	if !m.currentMachineRegion.Valid() {
-		panic("meridian.Init() must be called before using getCurrentMachineRegion()")
-	}
-	return m.currentMachineRegion
 }
 
 // PublishReplicatableAppMsgToKafka publishes an app replication message to Kafka
@@ -44,12 +34,7 @@ func (c *AppReplication) PublishReplicatableAppMsgToKafka(ctx context.Context, m
 	if err != nil {
 		// If local save fails, send to all regions including source
 		// to ensure eventual consistency
-		targetRegions = repository.AllRegionValues()
-	} else {
-		// Local save succeeded, only send to other regions
-		targetRegions = slices.DeleteFunc(repository.AllRegionValues(), func(r repository.Region) bool {
-			return c.currentMachineRegion == r
-		})
+
 	}
 
 	if len(targetRegions) == 0 {
@@ -57,18 +42,13 @@ func (c *AppReplication) PublishReplicatableAppMsgToKafka(ctx context.Context, m
 	}
 
 	// Publish to each target region
-	for _, region := range targetRegions {
-		writer, exists := c.regionKafkaWriters[region]
-		if !exists {
-			return fmt.Errorf("no kafka writer configured for region: %s", region)
-		}
-
-		err := writer.WriteMessages(ctx, kafka.Message{
+	for _, region := range c.crossRegionWriters {
+		err := region.WriteMessages(ctx, kafka.Message{
 			Key:   msg.ID.Bytes[:],
 			Value: messageBytes,
 		})
 		if err != nil {
-			return fmt.Errorf("writing to region %s: %w", region, err)
+			return fmt.Errorf("writing to region %v: %w", region, err)
 		}
 	}
 

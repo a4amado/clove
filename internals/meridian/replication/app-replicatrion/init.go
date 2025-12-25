@@ -15,15 +15,14 @@ import (
 )
 
 type AppReplication struct {
-	conn                     *redis.Client
-	regionKafkaWriters       map[repository.Region]*kafka.Writer
-	replicatableAppMsgReader *kafka.Reader
-	currentMachineRegion     repository.Region
-	meridianInitOnce         sync.Once
+	conn               *redis.Client
+	crossRegionWriters map[repository.Region]*kafka.Writer
+	localRegion        repository.Region
+	localKafkaWriter   *kafka.Writer
+	localReader        *kafka.Reader
+	meridianInitOnce   sync.Once
 }
 
-// RedisFanOutConn:   redisPool.Client(redisPool.RedisFanout),
-// RedisHearbeatConn: redisPool.Client(redisPool.RedisHeartbeat),
 var replicationOnce = sync.Once{}
 var replication *AppReplication
 
@@ -40,25 +39,22 @@ func ReplicateApp() *AppReplication {
 			panic(fmt.Sprintf("no valid region set in environment variable, got: %q", region))
 		}
 		replication = &AppReplication{
-			replicatableAppMsgReader: kafka.NewReader(kafka.ReaderConfig{
+			localReader: kafka.NewReader(kafka.ReaderConfig{
 				Brokers: []string{kafkaBootstrap},
 				Topic:   fmt.Sprintf("%s-app-replication", currentMachineRegion),
 				GroupID: fmt.Sprintf("%s-app-replication-group", currentMachineRegion),
 			}),
 			conn: redisPool.Client(redisPool.RedisStore),
-			regionKafkaWriters: map[repository.Region]*kafka.Writer{
-				repository.RegionDk1: {
-					Addr:                   kafka.TCP(kafkaBootstrap),
-					Topic:                  fmt.Sprintf("%s-app-replication", repository.RegionDk1),
-					Balancer:               &kafka.RoundRobin{},
-					MaxAttempts:            3,
-					WriteTimeout:           10 * time.Second,
-					AllowAutoTopicCreation: true,
-					RequiredAcks:           kafka.RequireOne,
-					Compression:            kafka.Gzip,
-				},
+			localKafkaWriter: &kafka.Writer{
+				Addr:                   kafka.TCP(kafkaBootstrap),
+				Topic:                  fmt.Sprintf("%s-app-replication", repository.RegionDk1),
+				Balancer:               &kafka.RoundRobin{},
+				MaxAttempts:            3,
+				WriteTimeout:           10 * time.Second,
+				AllowAutoTopicCreation: true,
+				RequiredAcks:           kafka.RequireOne,
+				Compression:            kafka.Gzip,
 			},
-			currentMachineRegion: currentMachineRegion,
 		}
 	})
 

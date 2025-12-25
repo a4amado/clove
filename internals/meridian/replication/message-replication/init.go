@@ -15,11 +15,12 @@ import (
 )
 
 type MessageReplication struct {
-	conn                      *redis.Client
-	regionKafkaWriters        map[repository.Region]*kafka.Writer
-	replicatableMessageReader *kafka.Reader
-	currentMachineRegion      repository.Region
-	meridianInitOnce          sync.Once
+	conn               *redis.Client
+	crossRegionWriters map[repository.Region]*kafka.Writer
+	localRegion        repository.Region
+	localKafkaWriter   *kafka.Writer
+	localReader        *kafka.Reader
+	meridianInitOnce   sync.Once
 }
 
 var MessageReplicationOnce = sync.Once{}
@@ -41,23 +42,23 @@ func ReplicateMessage() *MessageReplication {
 	MessageReplicationOnce.Do(func() {
 		replication = &MessageReplication{
 			conn: redisPool.Client(redisPool.RedisFanout),
-			regionKafkaWriters: map[repository.Region]*kafka.Writer{
-				repository.RegionDk1: {
-					Addr:                   kafka.TCP(kafkaBootstrap),
-					Topic:                  fmt.Sprintf("%s-msg-replication", repository.RegionDk1),
-					Balancer:               &kafka.RoundRobin{},
-					MaxAttempts:            3,
-					WriteTimeout:           10 * time.Second,
-					AllowAutoTopicCreation: true,
-					RequiredAcks:           kafka.RequireOne,
-					Compression:            kafka.Gzip,
-				},
-			},
-			replicatableMessageReader: kafka.NewReader(kafka.ReaderConfig{
+			localReader: kafka.NewReader(kafka.ReaderConfig{
 				Brokers: []string{kafkaBootstrap},
 				Topic:   fmt.Sprintf("%s-msg-replication", currentMachineRegion),
 				GroupID: fmt.Sprintf("%s-msg-replication-group", currentMachineRegion),
 			}),
+			crossRegionWriters: map[repository.Region]*kafka.Writer{},
+			localRegion:        repository.RegionDk1,
+			localKafkaWriter: &kafka.Writer{
+				Addr:                   kafka.TCP(kafkaBootstrap),
+				Topic:                  fmt.Sprintf("%s-msg-replication", repository.RegionDk1),
+				Balancer:               &kafka.RoundRobin{},
+				MaxAttempts:            3,
+				WriteTimeout:           10 * time.Second,
+				AllowAutoTopicCreation: true,
+				RequiredAcks:           kafka.RequireOne,
+				Compression:            kafka.Gzip,
+			},
 		}
 	})
 

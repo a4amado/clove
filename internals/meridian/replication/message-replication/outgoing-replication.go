@@ -19,15 +19,6 @@ func (m *InternalReplicatableDeliveryMsg) MarshalJSON() ([]byte, error) {
 	return json.Marshal(m)
 }
 
-// getCurrentMachineRegion returns the current machine's region.
-// Panics if Init() has not been called.
-func (m *MessageReplication) getCurrentMachineRegion() repository.Region {
-	if !m.currentMachineRegion.Valid() {
-		panic("meridian.Init() must be called before using getCurrentMachineRegion()")
-	}
-	return m.currentMachineRegion
-}
-
 // PublishReplicatableAppMsgToKafka publishes an app replication message to Kafka
 // for distribution to other regions. It first attempts to save locally, and on
 // failure sends to all regions to ensure eventual consistency.
@@ -38,7 +29,7 @@ func (c *MessageReplication) PublishInternalReplicatableDeliveryMsgToKafka(ctx c
 	}
 	errList := []error{}
 	for _, region := range regions {
-		err := c.regionKafkaWriters[region].WriteMessages(ctx, kafka.Message{
+		err := c.crossRegionWriters[region].WriteMessages(ctx, kafka.Message{
 			Key:   []byte(msg.ChannelId),
 			Value: payload,
 		})
@@ -47,4 +38,15 @@ func (c *MessageReplication) PublishInternalReplicatableDeliveryMsgToKafka(ctx c
 		}
 	}
 	return errList
+}
+func (c *MessageReplication) PublishInternalReplicatableDeliveryMsgToLocalKafka(ctx context.Context, msg InternalReplicatableDeliveryMsg, regions []repository.Region) error {
+	payload, err := msg.MarshalJSON()
+	if err != nil {
+		return err
+	}
+	err = c.localKafkaWriter.WriteMessages(ctx, kafka.Message{
+		Key:   []byte(msg.ChannelId),
+		Value: payload,
+	})
+	return err
 }
