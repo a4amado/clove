@@ -47,8 +47,19 @@ func ReplicateMessage() *MessageReplication {
 				Topic:   fmt.Sprintf("%s-msg-replication", currentMachineRegion),
 				GroupID: fmt.Sprintf("%s-msg-replication-group", currentMachineRegion),
 			}),
-			crossRegionWriters: map[repository.Region]*kafka.Writer{},
-			localRegion:        repository.RegionDk1,
+			crossRegionWriters: map[repository.Region]*kafka.Writer{
+				repository.RegionDk1: {
+					Addr:                   kafka.TCP(kafkaBootstrap),
+					Topic:                  fmt.Sprintf("%s-msg-replication", repository.RegionDk1),
+					Balancer:               &kafka.RoundRobin{},
+					MaxAttempts:            3,
+					WriteTimeout:           10 * time.Second,
+					AllowAutoTopicCreation: true,
+					RequiredAcks:           kafka.RequireOne,
+					Compression:            kafka.Gzip,
+				},
+			},
+			localRegion: repository.RegionDk1,
 			localKafkaWriter: &kafka.Writer{
 				Addr:                   kafka.TCP(kafkaBootstrap),
 				Topic:                  fmt.Sprintf("%s-msg-replication", repository.RegionDk1),

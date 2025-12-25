@@ -21,14 +21,9 @@ import (
 	AppReplication "clove/internals/meridian/replication/app-replicatrion"
 	MessageReplication "clove/internals/meridian/replication/message-replication"
 	"sync"
-
-	"github.com/redis/go-redis/v9"
 )
 
 type Meridian struct {
-	RedisStoreConn    *redis.Client
-	RedisFanOutConn   *redis.Client
-	RedisHearbeatConn *redis.Client
 }
 
 var meridianOnce *Meridian

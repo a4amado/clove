@@ -55,6 +55,18 @@ func ReplicateApp() *AppReplication {
 				RequiredAcks:           kafka.RequireOne,
 				Compression:            kafka.Gzip,
 			},
+			crossRegionWriters: map[repository.Region]*kafka.Writer{
+				repository.RegionDk1: {
+					Addr:                   kafka.TCP(kafkaBootstrap),
+					Topic:                  fmt.Sprintf("%s-app-replication", repository.RegionDk1),
+					Balancer:               &kafka.RoundRobin{},
+					MaxAttempts:            3,
+					WriteTimeout:           10 * time.Second,
+					AllowAutoTopicCreation: true,
+					RequiredAcks:           kafka.RequireOne,
+					Compression:            kafka.Gzip,
+				},
+			},
 		}
 	})
 

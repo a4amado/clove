@@ -44,6 +44,31 @@ func (c *MessageReplication) PublishInternalReplicatableDeliveryMsgToKafka(ctx c
 	}
 	return errList
 }
+
+func (c *MessageReplication) PublishInternalReplicatableDeliveryMsgToKafkaGlobaly(ctx context.Context, msg InternalReplicatableDeliveryMsg) []error {
+	payload, err := json.Marshal(msg)
+	if err != nil {
+		return []error{err}
+	}
+	err = c.localKafkaWriter.WriteMessages(ctx, kafka.Message{
+		Key:   []byte(msg.ChannelId),
+		Value: payload,
+	})
+	if err != nil {
+		return []error{err}
+	}
+	errList := []error{}
+	for _, region := range c.crossRegionWriters {
+		err := region.WriteMessages(ctx, kafka.Message{
+			Key:   []byte(msg.ChannelId),
+			Value: payload,
+		})
+		if err != nil {
+			errList = append(errList, err)
+		}
+	}
+	return errList
+}
 func (c *MessageReplication) PublishInternalReplicatableDeliveryMsgToLocalKafka(ctx context.Context, msg InternalReplicatableDeliveryMsg) error {
 	payload, err := json.Marshal(msg)
 	if err != nil {

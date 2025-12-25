@@ -131,7 +131,6 @@ func UserConnect(w http.ResponseWriter, r *http.Request) {
 			if !ok {
 				return
 			}
-			fmt.Println("msg: ", string(ch.Payload))
 			err := conn.WriteMessage(websocket.BinaryMessage, []byte(ch.Payload))
 			if err != nil {
 				return
