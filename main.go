@@ -36,11 +36,11 @@ func main() {
 	mongoDB.Init()
 	emailTemplates.Init()
 
-	replicate := meridian.Client().Replicate()
+	replicate := meridian.Client().ReplicateApp()
 
 	fanout := meridian.Client().Fanout()
 
-	go replicate.StartKafkaToRedisBridge(context.Background())
+	go replicate.BridgeKafkaAppReplicatorToRedis(context.Background())
 	user, err := repository.New(postgresPool.Client()).InsertUser(context.Background(), repository.InsertUserParams{
 		Email: uuid.NewString() + "a4addel@gmail.com",
 		Hash:  "ssssssssssssssssss",

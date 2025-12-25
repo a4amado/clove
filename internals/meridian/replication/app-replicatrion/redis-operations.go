@@ -1,4 +1,4 @@
-package replication
+package AppReplication
 
 import (
 	redisPool "clove/internals/data/redispool"
@@ -12,7 +12,7 @@ import (
 )
 
 // SaveApp saves the app info comming from the global replication, into the local redis instance
-func (c *Replication) SaveApp(ctx context.Context, app repository.App) error {
+func (c *AppReplication) SaveApp(ctx context.Context, app repository.App) error {
 	bytes, err := json.Marshal(app)
 	if err != nil {
 		return err
@@ -26,7 +26,7 @@ func (c *Replication) SaveApp(ctx context.Context, app repository.App) error {
 }
 
 // FetchApp fetches the app info from the local redis instance
-func (c *Replication) FetchApp(ctx context.Context, appid pgtype.UUID) (*repository.App, error) {
+func (c *AppReplication) FetchApp(ctx context.Context, appid pgtype.UUID) (*repository.App, error) {
 
 	result := c.conn.Get(ctx, c.FormatAppKey(appid))
 	byts, err := result.Bytes()
@@ -47,6 +47,6 @@ func (c *Replication) FetchApp(ctx context.Context, appid pgtype.UUID) (*reposit
 	return &fetchedApp, nil
 
 }
-func (c *Replication) FormatAppKey(appId pgtype.UUID) string {
+func (c *AppReplication) FormatAppKey(appId pgtype.UUID) string {
 	return fmt.Sprintf("app:%s", appId.String())
 }

@@ -18,7 +18,8 @@ package meridian
 
 import (
 	"clove/internals/meridian/fanout"
-	"clove/internals/meridian/replication"
+	AppReplication "clove/internals/meridian/replication/app-replicatrion"
+	MessageReplication "clove/internals/meridian/replication/message-replication"
 	"sync"
 
 	"github.com/redis/go-redis/v9"
@@ -47,6 +48,10 @@ func (m *Meridian) Fanout() *fanout.FanOut {
 	return fanout.Fanout()
 }
 
-func (m *Meridian) Replicate() *replication.Replication {
-	return replication.Replicate()
+func (m *Meridian) ReplicateApp() *AppReplication.AppReplication {
+	return AppReplication.ReplicateApp()
+}
+
+func (m *Meridian) ReplicateMessage() *MessageReplication.MessageReplication {
+	return MessageReplication.ReplicateMessage()
 }

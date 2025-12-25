@@ -90,7 +90,7 @@ func UserConnect(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Try cache
-	app, err := meridian.Client().Replicate().FetchApp(ctx, appID)
+	app, err := meridian.Client().ReplicateApp().FetchApp(ctx, appID)
 
 	// Real cache error (not a miss) - fail fast
 	if err != nil && !errors.Is(err, redisPool.ErrCacheMiss) {
@@ -118,7 +118,7 @@ func UserConnect(w http.ResponseWriter, r *http.Request) {
 		go func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			if err := meridian.Client().Replicate().SaveApp(ctx, *app); err != nil {
+			if err := meridian.Client().ReplicateApp().SaveApp(ctx, *app); err != nil {
 				log.Printf("Failed to cache app %s: %v", appID, err)
 			}
 		}()
