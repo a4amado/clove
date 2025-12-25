@@ -6,6 +6,7 @@ import (
 	redisPool "clove/internals/data/redispool"
 	headers "clove/internals/handlers/api/response-utils/consts"
 	"clove/internals/meridian"
+	"clove/internals/meridian/fanout"
 	"clove/internals/repository"
 	"context"
 	"encoding/json"
@@ -20,7 +21,6 @@ import (
 	"github.com/gorilla/websocket"
 	set "github.com/hashicorp/go-set"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const (
@@ -70,44 +70,32 @@ func (m *MessageToClient) Binary() ([]byte, error) {
 func UserConnect(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	id := r.PathValue("app_id")
-	channel := r.URL.Query().Get("channel")
-
-	if channel == "" {
-		http.Error(w, "No channels specified", http.StatusBadRequest)
-		return
-	}
-
-	appUuid, err := uuid.Parse(id)
+	appUuid, err := uuid.Parse(r.PathValue("app_id"))
 	if err != nil {
 		http.Error(w, "Invalid app ID", http.StatusBadRequest)
 		return
 	}
-
-	appID := pgtype.UUID{
-		Bytes: appUuid,
-		Valid: true,
-	}
+	channel := r.URL.Query().Get("channel")
 
 	// Try cache
-	app, err := meridian.Client().ReplicateApp().FetchApp(ctx, appID)
+	app, err := meridian.Client().ReplicateApp().FetchApp(ctx, appUuid)
 
 	// Real cache error (not a miss) - fail fast
 	if err != nil && !errors.Is(err, redisPool.ErrCacheMiss) {
-		log.Printf("Cache error fetching app %s: %v", appID, err)
+		log.Printf("Cache error fetching app %s: %v", appUuid, err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
 	// Cache miss - fetch from database
 	if app == nil {
-		dbApp, err := repository.New(dbPool.Client()).FindAppById(ctx, appID)
+		dbApp, err := repository.New(dbPool.Client()).FindAppById(ctx, appUuid)
 		if errors.Is(err, pgx.ErrNoRows) {
 			http.Error(w, "App not found", http.StatusNotFound)
 			return
 		}
 		if err != nil {
-			log.Printf("Database error fetching app %s: %v", appID, err)
+			log.Printf("Database error fetching app %s: %v", appUuid, err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
@@ -119,7 +107,7 @@ func UserConnect(w http.ResponseWriter, r *http.Request) {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 			if err := meridian.Client().ReplicateApp().SaveApp(ctx, *app); err != nil {
-				log.Printf("Failed to cache app %s: %v", appID, err)
+				log.Printf("Failed to cache app %s: %v", appUuid, err)
 			}
 		}()
 	}
@@ -127,17 +115,26 @@ func UserConnect(w http.ResponseWriter, r *http.Request) {
 	// Select upgrader based on app type
 	var upgrader = newUpgrader(app)
 	conn, _ := upgrader.Upgrade(w, r, nil)
-	fanout := meridian.Client().Fanout()
-	pubSub := fanout.Subscribe(ctx, fanout.FormatChannelKey(appUuid, channel))
+	fanoutclient := meridian.Client().Fanout()
+	fmt.Println("Subscribed to: ", fanoutclient.FormatChannelKey(fanout.ChannelKey{
+		AppId:     appUuid,
+		ChannelId: channel,
+	}))
+	pubSub := fanout.Fanout().Subscribe(ctx, fanoutclient.FormatChannelKey(fanout.ChannelKey{
+		AppId:     appUuid,
+		ChannelId: channel,
+	}))
 	ch := pubSub.Channel()
 	for {
 		select {
 		case ch, ok := <-ch:
 			if !ok {
+				return
 			}
 			fmt.Println("msg: ", string(ch.Payload))
 			err := conn.WriteMessage(websocket.BinaryMessage, []byte(ch.Payload))
 			if err != nil {
+				return
 			}
 		case <-ctx.Done():
 			return

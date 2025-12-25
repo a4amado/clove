@@ -7,6 +7,7 @@ import (
 	emailTemplates "clove/internals/email/email-templates"
 	Api "clove/internals/handlers/api"
 	"clove/internals/meridian"
+	"clove/internals/meridian/fanout"
 	"clove/internals/repository"
 	"context"
 	_ "embed"
@@ -36,11 +37,11 @@ func main() {
 	mongoDB.Init()
 	emailTemplates.Init()
 
-	replicate := meridian.Client().ReplicateApp()
+	replicateClient := meridian.Client().ReplicateApp()
 
-	fanout := meridian.Client().Fanout()
+	fanoutClient := meridian.Client().Fanout()
 
-	go replicate.BridgeKafkaAppReplicatorToRedis(context.Background())
+	go replicateClient.BridgeKafkaAppReplicatorToRedis(context.Background())
 	user, err := repository.New(postgresPool.Client()).InsertUser(context.Background(), repository.InsertUserParams{
 		Email: uuid.NewString() + "a4addel@gmail.com",
 		Hash:  "ssssssssssssssssss",
@@ -59,18 +60,20 @@ func main() {
 	}
 	fmt.Println(app.ID.String())
 
-	err = replicate.SaveApp(context.Background(), app)
+	err = replicateClient.SaveApp(context.Background(), app)
 	if err != nil {
 		panic(err)
 	}
-
+	fmt.Println("sending to: ", fanoutClient.FormatChannelKey(fanout.ChannelKey{
+		AppId:     app.ID.Bytes,
+		ChannelId: "test",
+	}))
+	go meridian.Client().ReplicateMessage().BridgeKafkaInternalDelevieryReplicatorToRedis(context.Background())
 	go func() {
 		t := time.NewTicker(time.Second)
 		for {
 			<-t.C
-			fmt.Println("sss")
 
-			fanout.Publish(context.Background(), fanout.FormatChannelKey(uuid.UUID(app.ID.Bytes), "test"), "test")
 		}
 
 	}()

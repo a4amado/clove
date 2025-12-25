@@ -8,7 +8,7 @@ package repository
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/google/uuid"
 )
 
 const findAppById = `-- name: FindAppById :one
@@ -17,7 +17,7 @@ where "id" = $1
 limit 1
 `
 
-func (q *Queries) FindAppById(ctx context.Context, appid pgtype.UUID) (App, error) {
+func (q *Queries) FindAppById(ctx context.Context, appid uuid.UUID) (App, error) {
 	row := q.db.QueryRow(ctx, findAppById, appid)
 	var i App
 	err := row.Scan(

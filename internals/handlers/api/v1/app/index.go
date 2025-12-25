@@ -7,5 +7,6 @@ import "github.com/go-chi/chi/v5"
 func Routes() chi.Router {
 	router := chi.NewRouter()
 	router.Get("/{app_id}/ws", UserConnect)
+	router.Post("/{app_id}/channels/{channel_id}", UserConnect)
 	return router
 }

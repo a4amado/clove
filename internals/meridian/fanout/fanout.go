@@ -26,13 +26,18 @@ func Fanout() *FanOut {
 	return fanout
 }
 
-func (f *FanOut) Publish(ctx context.Context, channel string, message any) {
-	f.conn.Publish(ctx, channel, message)
+func (f *FanOut) Publish(ctx context.Context, channel string, message any) *redis.IntCmd {
+	return f.conn.Publish(ctx, channel, message)
 }
 func (f *FanOut) Subscribe(ctx context.Context, channels ...string) *redis.PubSub {
 	return f.conn.Subscribe(ctx, channels...)
 }
 
-func (c *FanOut) FormatChannelKey(app uuid.UUID, channel string) string {
-	return fmt.Sprintf("%s:%s", app.String(), channel)
+type ChannelKey struct {
+	AppId     uuid.UUID
+	ChannelId string
+}
+
+func (c *FanOut) FormatChannelKey(key ChannelKey) string {
+	return fmt.Sprintf("%s:%s", key.AppId.String(), key.ChannelId)
 }

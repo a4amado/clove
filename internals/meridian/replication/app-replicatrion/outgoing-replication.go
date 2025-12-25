@@ -14,10 +14,6 @@ type ReplicatableAppMsg struct {
 	repository.App
 }
 
-func (m *ReplicatableAppMsg) MarshalJSON() ([]byte, error) {
-	return json.Marshal(ReplicatableAppMsg{App: m.App})
-}
-
 // PublishReplicatableAppMsgToKafka publishes an app replication message to Kafka
 // for distribution to other regions. It first attempts to save locally, and on
 // failure sends to all regions to ensure eventual consistency.
@@ -34,7 +30,7 @@ func (c *AppReplication) PublishReplicatableAppMsgToKafka(ctx context.Context, m
 	if err != nil {
 		// If local save fails, send to all regions including source
 		// to ensure eventual consistency
-
+		targetRegions = repository.AllRegionValues()
 	}
 
 	if len(targetRegions) == 0 {
@@ -43,12 +39,13 @@ func (c *AppReplication) PublishReplicatableAppMsgToKafka(ctx context.Context, m
 
 	// Publish to each target region
 	for _, region := range c.crossRegionWriters {
+
 		err := region.WriteMessages(ctx, kafka.Message{
 			Key:   msg.ID.Bytes[:],
 			Value: messageBytes,
 		})
 		if err != nil {
-			return fmt.Errorf("writing to region %v: %w", region, err)
+			return fmt.Errorf("writing to region %s: %w", region, err)
 		}
 	}
 
