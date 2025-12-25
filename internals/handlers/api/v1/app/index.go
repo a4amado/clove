@@ -6,6 +6,6 @@ import "github.com/go-chi/chi/v5"
 // It registers a GET route at /app/{app_id}/ws handled by UserConnect and returns the router.
 func Routes() chi.Router {
 	router := chi.NewRouter()
-	router.Get("/app/{app_id}/ws", UserConnect)
+	router.Get("/{app_id}/ws", UserConnect)
 	return router
 }

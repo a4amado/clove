@@ -6,6 +6,7 @@ import (
 	"os"
 	"sync"
 
+	"github.com/joho/godotenv"
 	goRedis "github.com/redis/go-redis/v9"
 )
 
@@ -17,14 +18,9 @@ const (
 	RedisFanout    RedisDB = 2
 )
 
-// Client returns a Redis client configured for the specified RedisDB pool.
-//
-// It selects the connection URL from the environment based on `pool` (using
-// envConsts.REDIS_STORE_URL, envConsts.REDIS_FANOUT_URL, or
-// envConsts.REDIS_HEARTBEAT_URL), parses that URL into options, and returns a
-// new *goRedis.Client configured with those options. The function panics if the
-// connection URL cannot be parsed.
-
+// Client returns the singleton Redis client for the specified RedisDB pool.
+// Init() must be called before using Client(), or the returned client will be nil.
+// Panics if an invalid pool type is provided.
 var redisStoreConn *goRedis.Client
 var redisStoreConnOnce = sync.Once{}
 var redisFanoutConn *goRedis.Client
@@ -35,6 +31,7 @@ var redisHeartbeatConnOnce = sync.Once{}
 func Init() {
 	wg := sync.WaitGroup{}
 	wg.Go(func() {
+		godotenv.Load()
 		connString := os.Getenv(string(envConsts.REDIS_STORE_URL))
 		redisStoreConnOnce.Do(func() {
 			opts, err := goRedis.ParseURL(connString)
@@ -46,7 +43,7 @@ func Init() {
 	})
 
 	wg.Go(func() {
-		defer wg.Done()
+		godotenv.Load()
 		connString := os.Getenv(string(envConsts.REDIS_FANOUT_URL))
 		redisFanoutConnOnce.Do(func() {
 			opts, err := goRedis.ParseURL(connString)
@@ -57,7 +54,7 @@ func Init() {
 		})
 	})
 	wg.Go(func() {
-		defer wg.Done()
+		godotenv.Load()
 		connString := os.Getenv(string(envConsts.REDIS_HEARTBEAT_URL))
 		redisHeartbeatConnOnce.Do(func() {
 			opts, err := goRedis.ParseURL(connString)

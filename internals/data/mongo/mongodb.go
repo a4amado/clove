@@ -5,6 +5,7 @@ import (
 	"os"
 	"sync"
 
+	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
@@ -13,6 +14,7 @@ var mongodbClient *mongo.Client
 var mongodbClientOnce = sync.Once{}
 
 func Init() {
+	godotenv.Load()
 	mongodbClientOnce.Do(func() {
 		client, err := mongo.Connect(options.Client().ApplyURI(os.Getenv(string(envConsts.MONGO_HISTORY_DATABASE_URL))))
 		if err != nil {
