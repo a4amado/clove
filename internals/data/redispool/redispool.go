@@ -3,7 +3,6 @@ package redisPool
 import (
 	envConsts "clove/internals/consts/env"
 	"errors"
-	"os"
 	"sync"
 
 	"github.com/joho/godotenv"
@@ -32,9 +31,8 @@ func Init() {
 	wg := sync.WaitGroup{}
 	wg.Go(func() {
 		godotenv.Load()
-		connString := os.Getenv(string(envConsts.REDIS_STORE_URL))
 		redisStoreConnOnce.Do(func() {
-			opts, err := goRedis.ParseURL(connString)
+			opts, err := goRedis.ParseURL(envConsts.RedisStoreURL())
 			if err != nil {
 				panic(err)
 			}
@@ -43,10 +41,9 @@ func Init() {
 	})
 
 	wg.Go(func() {
-		godotenv.Load()
-		connString := os.Getenv(string(envConsts.REDIS_FANOUT_URL))
+
 		redisFanoutConnOnce.Do(func() {
-			opts, err := goRedis.ParseURL(connString)
+			opts, err := goRedis.ParseURL(envConsts.RedisFanoutURL())
 			if err != nil {
 				panic(err)
 			}
@@ -54,10 +51,9 @@ func Init() {
 		})
 	})
 	wg.Go(func() {
-		godotenv.Load()
-		connString := os.Getenv(string(envConsts.REDIS_HEARTBEAT_URL))
+
 		redisHeartbeatConnOnce.Do(func() {
-			opts, err := goRedis.ParseURL(connString)
+			opts, err := goRedis.ParseURL(envConsts.RedisHeartbeatURL())
 			if err != nil {
 				panic(err)
 			}

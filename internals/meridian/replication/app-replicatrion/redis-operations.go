@@ -1,4 +1,4 @@
-package replication
+package AppReplication
 
 import (
 	redisPool "clove/internals/data/redispool"
@@ -7,17 +7,17 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 )
 
 // SaveApp saves the app info comming from the global replication, into the local redis instance
-func (c *Replication) SaveApp(ctx context.Context, app repository.App) error {
+func (c *AppReplication) SaveApp(ctx context.Context, app repository.App) error {
 	bytes, err := json.Marshal(app)
 	if err != nil {
 		return err
 	}
-	cmd := c.conn.Set(ctx, c.FormatAppKey(app.ID), string(bytes), 0)
+	cmd := c.conn.Set(ctx, c.FormatAppKey(app.ID.Bytes), string(bytes), 0)
 	_, err = cmd.Result()
 	if err != nil {
 		return err
@@ -26,7 +26,7 @@ func (c *Replication) SaveApp(ctx context.Context, app repository.App) error {
 }
 
 // FetchApp fetches the app info from the local redis instance
-func (c *Replication) FetchApp(ctx context.Context, appid pgtype.UUID) (*repository.App, error) {
+func (c *AppReplication) FetchApp(ctx context.Context, appid uuid.UUID) (*repository.App, error) {
 
 	result := c.conn.Get(ctx, c.FormatAppKey(appid))
 	byts, err := result.Bytes()
@@ -47,6 +47,6 @@ func (c *Replication) FetchApp(ctx context.Context, appid pgtype.UUID) (*reposit
 	return &fetchedApp, nil
 
 }
-func (c *Replication) FormatAppKey(appId pgtype.UUID) string {
+func (c *AppReplication) FormatAppKey(appId uuid.UUID) string {
 	return fmt.Sprintf("app:%s", appId.String())
 }

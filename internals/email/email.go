@@ -2,9 +2,7 @@ package email
 
 import (
 	envConsts "clove/internals/consts/env"
-	"os"
 
-	"github.com/joho/godotenv"
 	"github.com/mailjet/mailjet-apiv3-go/v4"
 )
 
@@ -26,12 +24,9 @@ type NewEmailClientOptions struct {
 // FromEmail, and FromName copied from opts and Client set to a new Mailjet client.
 // No validation is performed on the provided options.
 func New(opts NewEmailClientOptions) Email {
-	godotenv.Load()
-	var publicKey = os.Getenv(string(envConsts.MAILJET_API_KEY))
-	var secretKey = os.Getenv(string(envConsts.MAILJET_API_SECRETS))
 
 	return Email{
-		Client:    mailjet.NewMailjetClient(publicKey, secretKey),
+		Client:    mailjet.NewMailjetClient(envConsts.MailjetAPIKey(), envConsts.MailjetAPISecrets()),
 		ApiV:      opts.ApiV,
 		FromEmail: opts.FromEmail,
 		FromName:  opts.FromName,

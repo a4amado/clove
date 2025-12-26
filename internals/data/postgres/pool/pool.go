@@ -4,12 +4,10 @@ import (
 	envConsts "clove/internals/consts/env"
 	"context"
 	"fmt"
-	"os"
 	"sync"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/joho/godotenv"
 )
 
 var dbPool *pgxpool.Pool
@@ -17,9 +15,7 @@ var dbConnOnce = sync.Once{}
 
 func Init() {
 	dbConnOnce.Do(func() {
-		godotenv.Load()
-		fmt.Println("ENVVVVVVVVV", os.Getenv(string(envConsts.POSTGRES_DATABASE_URL)))
-		config, _ := pgxpool.ParseConfig(os.Getenv(string(envConsts.POSTGRES_DATABASE_URL)))
+		config, _ := pgxpool.ParseConfig(envConsts.PostgresDatabaseURL())
 		config.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
 			// Load the base enum
 			regionType, err := conn.LoadType(ctx, "region")
