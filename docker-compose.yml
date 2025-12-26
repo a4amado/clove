@@ -7,7 +7,7 @@ services:
     depends_on:
       - db
       - mongo
-      - redis
+      - valkey
       - broker
     networks:
       - main_network
@@ -24,10 +24,10 @@ services:
       - MONGO_HISTORY_DATABASE_NAME=clove-history
       - MONGO_HISTORY_DATABASE_USR_COLLECTION_NAME=user-history
       - MONGO_HISTORY_DATABASE_APP_COLLECTION_NAME=app-history
-      # Redis - Use service name and container password
-      - REDIS_STORE_URL=redis://:mypassword@redis:6379/0
-      - REDIS_FANOUT_URL=redis://:mypassword@redis:6379/1
-      - REDIS_HEARTBEAT_URL=redis://:mypassword@redis:6379/3
+      # Valkey - Use service name and container password (Redis-compatible protocol)
+      - REDIS_STORE_URL=redis://:mypassword@valkey:6379/0
+      - REDIS_FANOUT_URL=redis://:mypassword@valkey:6379/1
+      - REDIS_HEARTBEAT_URL=redis://:mypassword@valkey:6379/3
       # Geo-Region
       - REGION=dk1
       # Kafka - Use service name
@@ -76,21 +76,19 @@ services:
       timeout: 10s
       retries: 5
 
-  redis:
-    image: redis/redis-stack:latest
-    container_name: redis
+  valkey:
+    image: valkey/valkey:latest
+    container_name: valkey
     networks:
       - main_network
     ports:
       - "6379:6379"
-      - "8001:8001"  # RedisInsight
     restart: unless-stopped
-    environment:
-      REDIS_ARGS: "--requirepass mypassword --appendonly yes"
+    command: valkey-server --requirepass mypassword --appendonly yes
     volumes:
-      - redis_data:/data
+      - valkey_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      test: ["CMD", "valkey-cli", "-a", "mypassword", "ping"]
       interval: 10s
       timeout: 3s
       retries: 5
@@ -138,7 +136,7 @@ services:
       retries: 5
 
 volumes:
-  redis_data:
+  valkey_data:
     driver: local
   mongo_data:
     driver: local

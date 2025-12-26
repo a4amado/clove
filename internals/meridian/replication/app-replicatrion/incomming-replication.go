@@ -9,7 +9,7 @@ import (
 )
 
 // StartKafkaToRedisBridge starts a Kafka consumer that continuously reads app
-// replication messages and saves them to the local Redis instance.
+// replication messages and saves them to the local Valkey instance.
 // This function blocks until the context is cancelled.
 func (c *AppReplication) BridgeKafkaAppReplicatorToRedis(ctx context.Context) {
 

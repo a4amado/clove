@@ -2,18 +2,18 @@ package AppReplication
 
 import (
 	envConsts "clove/internals/consts/env"
-	redisPool "clove/internals/data/redispool"
+	"clove/internals/data/valkeyPool"
 	"clove/internals/repository"
 	"fmt"
 	"sync"
 	"time"
 
-	"github.com/redis/go-redis/v9"
 	"github.com/segmentio/kafka-go"
+	"github.com/valkey-io/valkey-go"
 )
 
 type AppReplication struct {
-	conn               *redis.Client
+	conn               valkey.Client
 	crossRegionWriters map[repository.Region]*kafka.Writer
 	localRegion        repository.Region
 	localKafkaWriter   *kafka.Writer
@@ -39,7 +39,7 @@ func ReplicateApp() *AppReplication {
 		}
 		replication = &AppReplication{
 			localReaders: readers,
-			conn:         redisPool.Client(redisPool.RedisStore),
+			conn:         valkeyPool.Client(valkeyPool.RedisStore),
 			localKafkaWriter: &kafka.Writer{
 				Addr:                   kafka.TCP(envConsts.KafkaBootstrap()),
 				Topic:                  fmt.Sprintf("%s-app-replication", envConsts.Region()),

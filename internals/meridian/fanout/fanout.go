@@ -1,17 +1,17 @@
 package fanout
 
 import (
-	redisPool "clove/internals/data/redispool"
+	"clove/internals/data/valkeyPool"
 	"context"
 	"fmt"
 	"sync"
 
 	"github.com/google/uuid"
-	"github.com/redis/go-redis/v9"
+	"github.com/valkey-io/valkey-go/valkeycompat"
 )
 
 type FanOut struct {
-	conn *redis.Client
+	adapter valkeycompat.Cmdable
 }
 
 var fanoutOnce = sync.Once{}
@@ -20,17 +20,26 @@ var fanout *FanOut
 func Fanout() *FanOut {
 	fanoutOnce.Do(func() {
 		fanout = &FanOut{
-			conn: redisPool.Client(redisPool.RedisFanout),
+			adapter: valkeycompat.NewAdapter(valkeyPool.Client(valkeyPool.RedisFanout)),
 		}
 	})
 	return fanout
 }
 
-func (f *FanOut) Publish(ctx context.Context, channel string, message any) *redis.IntCmd {
-	return f.conn.Publish(ctx, channel, message)
+func (f *FanOut) Publish(ctx context.Context, channel string, message any) error {
+	var msgStr string
+	switch v := message.(type) {
+	case string:
+		msgStr = v
+	case []byte:
+		msgStr = valkeycompat.BytesToString(v)
+	default:
+		msgStr = fmt.Sprintf("%v", v)
+	}
+	return f.adapter.Publish(ctx, channel, msgStr).Err()
 }
-func (f *FanOut) Subscribe(ctx context.Context, channels ...string) *redis.PubSub {
-	return f.conn.Subscribe(ctx, channels...)
+func (f *FanOut) Subscribe(ctx context.Context, channels ...string) valkeycompat.PubSub {
+	return f.adapter.Subscribe(ctx, channels...)
 }
 
 type ChannelKey struct {

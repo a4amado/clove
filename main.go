@@ -3,7 +3,7 @@ package main
 import (
 	mongoDB "clove/internals/data/mongo"
 	postgresPool "clove/internals/data/postgres/pool"
-	redisPool "clove/internals/data/redispool"
+	"clove/internals/data/valkeyPool"
 	Api "clove/internals/handlers/api"
 	"clove/internals/meridian"
 	"clove/internals/meridian/fanout"
@@ -33,9 +33,9 @@ func main() {
 	}
 
 	postgresPool.Client()
-	redisPool.Client(redisPool.RedisFanout)
-	redisPool.Client(redisPool.RedisHeartbeat)
-	redisPool.Client(redisPool.RedisStore)
+	valkeyPool.Client(valkeyPool.RedisFanout)
+	valkeyPool.Client(valkeyPool.RedisHeartbeat)
+	valkeyPool.Client(valkeyPool.RedisStore)
 	mongoDB.Client()
 
 	replicateClient := meridian.Client().ReplicateApp()

@@ -3,7 +3,7 @@ package AppHandlersV1
 import (
 	appConsts "clove/internals/consts/app"
 	dbPool "clove/internals/data/postgres/pool"
-	redisPool "clove/internals/data/redispool"
+	"clove/internals/data/valkeyPool"
 	headers "clove/internals/handlers/api/response-utils/consts"
 	"clove/internals/meridian"
 	"clove/internals/meridian/fanout"
@@ -66,7 +66,7 @@ func (m *MessageToClient) Binary() ([]byte, error) {
 // to load the app configuration from cache and falls back to the database (caching
 // the DB result asynchronously on success). It replies with HTTP 400 for missing or
 // invalid parameters, 404 if the app is not found, and 500 on internal errors.
-// After a successful upgrade it subscribes the connection to Redis channels and starts
+// After a successful upgrade it subscribes the connection to Valkey channels and starts
 // the connection's read/write pumps; subscription failures close the connection.
 func UserConnect(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -82,7 +82,7 @@ func UserConnect(w http.ResponseWriter, r *http.Request) {
 	app, err := meridian.Client().ReplicateApp().FetchApp(ctx, appUuid)
 
 	// Real cache error (not a miss) - fail fast
-	if err != nil && !errors.Is(err, redisPool.ErrCacheMiss) {
+	if err != nil && !errors.Is(err, valkeyPool.ErrCacheMiss) {
 		log.Printf("Cache error fetching app %s: %v", appUuid, err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -138,7 +138,7 @@ func UserConnect(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				select {
-				case writeCh <- []byte(msg.Payload):
+				case writeCh <- []byte(msg.Payload): // msg.Payload is string, convert to []byte
 				case <-ctx.Done():
 					return
 				}

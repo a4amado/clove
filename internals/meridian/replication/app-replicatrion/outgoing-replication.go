@@ -25,7 +25,7 @@ func (c *AppReplication) PublishReplicatableAppMsgToKafka(ctx context.Context, m
 
 	var targetRegions []repository.Region
 
-	// Try saving to local redis first
+	// Try saving to local valkey first
 	err = c.SaveApp(ctx, msg.App)
 	if err != nil {
 		// If local save fails, send to all regions including source
