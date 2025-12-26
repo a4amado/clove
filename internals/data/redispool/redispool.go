@@ -27,7 +27,7 @@ var redisFanoutConnOnce = sync.Once{}
 var redisHeartbeatConn *goRedis.Client
 var redisHeartbeatConnOnce = sync.Once{}
 
-func Init() {
+func Client(pool RedisDB) *goRedis.Client {
 	wg := sync.WaitGroup{}
 	wg.Go(func() {
 		godotenv.Load()
@@ -61,9 +61,6 @@ func Init() {
 		})
 	})
 	wg.Wait()
-}
-func Client(pool RedisDB) *goRedis.Client {
-
 	switch pool {
 	case RedisStore:
 		return redisStoreConn

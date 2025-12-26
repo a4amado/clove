@@ -19,12 +19,6 @@ var templates *template.Template
 //
 // It runs the initialization exactly once (safe for concurrent callers) and assigns the parsed templates to the package-level `templates` variable.
 // The function will panic if template parsing fails.
-func Init() {
-	once.Do(func() {
-		templates = template.Must(template.ParseFS(fs, "*.tmpl"))
-	})
-
-}
 
 type VerifyEmailTemplate struct {
 	Token string
@@ -36,7 +30,10 @@ func (d *VerifyEmailTemplate) formatEmailverificationURL(token string) string {
 }
 
 func (d *VerifyEmailTemplate) Render() (*string, error) {
-	Init()
+	once.Do(func() {
+		templates = template.Must(template.ParseFS(fs, "*.tmpl"))
+	})
+
 	buf := new(bytes.Buffer)
 	err := templates.ExecuteTemplate(buf, "verify-email.tmpl", map[string]string{
 		"verification_url": d.formatEmailverificationURL(d.Token),

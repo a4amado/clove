@@ -4,7 +4,6 @@ import (
 	mongoDB "clove/internals/data/mongo"
 	postgresPool "clove/internals/data/postgres/pool"
 	redisPool "clove/internals/data/redispool"
-	emailTemplates "clove/internals/email/email-templates"
 	Api "clove/internals/handlers/api"
 	"clove/internals/meridian"
 	"clove/internals/meridian/fanout"
@@ -33,10 +32,11 @@ func main() {
 		log.Fatal("Failed to load .env:", err)
 	}
 
-	postgresPool.Init()
-	redisPool.Init()
-	mongoDB.Init()
-	emailTemplates.Init()
+	postgresPool.Client()
+	redisPool.Client(redisPool.RedisFanout)
+	redisPool.Client(redisPool.RedisHeartbeat)
+	redisPool.Client(redisPool.RedisStore)
+	mongoDB.Client()
 
 	replicateClient := meridian.Client().ReplicateApp()
 

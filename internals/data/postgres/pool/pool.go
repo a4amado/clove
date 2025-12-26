@@ -13,7 +13,10 @@ import (
 var dbPool *pgxpool.Pool
 var dbConnOnce = sync.Once{}
 
-func Init() {
+// Client returns the package's singleton PostgreSQL connection pool.
+// It lazily initializes the pool on first call using the POSTGRES_DATABASE_URL
+// environment variable and panics if pool creation fails.
+func Client() *pgxpool.Pool {
 	dbConnOnce.Do(func() {
 		config, _ := pgxpool.ParseConfig(envConsts.PostgresDatabaseURL())
 		config.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
@@ -47,12 +50,5 @@ func Init() {
 
 		dbPool = pool
 	})
-}
-
-// Client returns the package's singleton PostgreSQL connection pool.
-// It lazily initializes the pool on first call using the POSTGRES_DATABASE_URL
-// environment variable and panics if pool creation fails.
-func Client() *pgxpool.Pool {
-	Init()
 	return dbPool
 }
