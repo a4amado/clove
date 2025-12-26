@@ -17,7 +17,7 @@ type MessageReplication struct {
 	crossRegionWriters map[repository.Region]*kafka.Writer
 	localRegion        repository.Region
 	localKafkaWriter   *kafka.Writer
-	localReader        *kafka.Reader
+	localReaders       []*kafka.Reader
 	meridianInitOnce   sync.Once
 }
 
@@ -27,22 +27,26 @@ var replication *MessageReplication
 func ReplicateMessage() *MessageReplication {
 
 	MessageReplicationOnce.Do(func() {
-		replication = &MessageReplication{
-			conn: redisPool.Client(redisPool.RedisFanout),
-			localReader: kafka.NewReader(kafka.ReaderConfig{
+		readers := make([]*kafka.Reader, 5)
+		for i := range envConsts.KafkaNumReaders() {
+			readers[i] = kafka.NewReader(kafka.ReaderConfig{
 				Brokers:        []string{envConsts.KafkaBootstrap()},
 				Topic:          fmt.Sprintf("%s-msg-replication", envConsts.Region()),
 				GroupID:        fmt.Sprintf("%s-msg-replication-group", envConsts.Region()),
 				QueueCapacity:  envConsts.KafkaReaderBufferSize(),
 				CommitInterval: time.Duration(envConsts.KafkaCommitInterval()) * time.Second,
-			}),
+			})
+		}
+		replication = &MessageReplication{
+			conn:         redisPool.Client(redisPool.RedisFanout),
+			localReaders: readers,
 			crossRegionWriters: map[repository.Region]*kafka.Writer{
 				repository.RegionDk1: {
 					Addr:                   kafka.TCP(envConsts.KafkaBootstrap()),
 					Topic:                  fmt.Sprintf("%s-msg-replication", repository.RegionDk1),
 					Balancer:               &kafka.RoundRobin{},
 					MaxAttempts:            3,
-					WriteTimeout:           10 * time.Second,
+					WriteTimeout:           3 * time.Second,
 					AllowAutoTopicCreation: true,
 					RequiredAcks:           kafka.RequireOne,
 					Compression:            kafka.Gzip,
@@ -54,7 +58,7 @@ func ReplicateMessage() *MessageReplication {
 				Topic:                  fmt.Sprintf("%s-msg-replication", repository.RegionDk1),
 				Balancer:               &kafka.RoundRobin{},
 				MaxAttempts:            3,
-				WriteTimeout:           10 * time.Second,
+				WriteTimeout:           3 * time.Second,
 				AllowAutoTopicCreation: true,
 				RequiredAcks:           kafka.RequireOne,
 				Compression:            kafka.Gzip,

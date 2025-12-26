@@ -113,7 +113,6 @@ func UserConnect(w http.ResponseWriter, r *http.Request) {
 		}()
 	}
 
-	// Select upgrader based on app type
 	var upgrader = newUpgrader(app)
 	conn, _ := upgrader.Upgrade(w, r, nil)
 	fanoutclient := meridian.Client().Fanout()
@@ -127,9 +126,9 @@ func UserConnect(w http.ResponseWriter, r *http.Request) {
 	}))
 	ch := pubSub.Channel()
 
-	// Internal channel for communication between goroutines
-	writeCh := make(chan []byte, 10000)
+	writeCh := make(chan []byte, 100)
 
+	// ! double-buffered one-reader one-writer guarantee delivery order
 	wg := sync.WaitGroup{}
 	wg.Go(func() {
 		for {
@@ -150,7 +149,6 @@ func UserConnect(w http.ResponseWriter, r *http.Request) {
 	})
 	lock := sync.Mutex{}
 
-	// Goroutine 1: Write to websocket
 	wg.Go(func() {
 		for {
 			select {
@@ -163,6 +161,8 @@ func UserConnect(w http.ResponseWriter, r *http.Request) {
 				lock.Unlock()
 				if err != nil {
 					return
+					lock.Unlock()
+
 				}
 			case <-ctx.Done():
 				return
@@ -170,24 +170,5 @@ func UserConnect(w http.ResponseWriter, r *http.Request) {
 		}
 	})
 
-	// Goroutine 2: Write to websocket
-	wg.Go(func() {
-		for {
-			select {
-			case data, ok := <-writeCh:
-				if !ok {
-					return
-				}
-				lock.Lock()
-				err := conn.WriteMessage(websocket.BinaryMessage, data)
-				lock.Unlock()
-				if err != nil {
-					return
-				}
-			case <-ctx.Done():
-				return
-			}
-		}
-	})
 	wg.Wait()
 }

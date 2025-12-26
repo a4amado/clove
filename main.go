@@ -73,9 +73,9 @@ func main() {
 		go meridian.Client().ReplicateMessage().BridgeKafkaInternalDelevieryReplicatorToRedis(context.Background())
 	}
 
-	for _, _ = range make([]string, 100) {
+	for _, _ = range make([]string, 1000) {
 		go func() {
-			ticker := time.NewTicker(time.Millisecond * 10)
+			ticker := time.NewTicker(time.Millisecond * 5)
 
 			for range ticker.C {
 				meridian.Client().ReplicateMessage().PublishInternalReplicatableDeliveryMsgToKafkaGlobaly(context.Background(), MessageReplication.InternalReplicatableDeliveryMsg{

@@ -17,7 +17,7 @@ type AppReplication struct {
 	crossRegionWriters map[repository.Region]*kafka.Writer
 	localRegion        repository.Region
 	localKafkaWriter   *kafka.Writer
-	localReader        *kafka.Reader
+	localReaders       []*kafka.Reader
 	region             repository.Region
 	meridianInitOnce   sync.Once
 }
@@ -27,16 +27,19 @@ var replication *AppReplication
 
 func ReplicateApp() *AppReplication {
 	replicationOnce.Do(func() {
-
-		replication = &AppReplication{
-			localReader: kafka.NewReader(kafka.ReaderConfig{
+		readers := make([]*kafka.Reader, 5)
+		for i := range envConsts.KafkaNumReaders() {
+			readers[i] = kafka.NewReader(kafka.ReaderConfig{
 				Brokers:        []string{envConsts.KafkaBootstrap()},
 				Topic:          fmt.Sprintf("%s-app-replication", envConsts.Region()),
 				GroupID:        fmt.Sprintf("%s-app-replication-group", envConsts.Region()),
 				QueueCapacity:  envConsts.KafkaReaderBufferSize(),
 				CommitInterval: time.Duration(envConsts.KafkaCommitInterval()) * time.Second,
-			}),
-			conn: redisPool.Client(redisPool.RedisStore),
+			})
+		}
+		replication = &AppReplication{
+			localReaders: readers,
+			conn:         redisPool.Client(redisPool.RedisStore),
 			localKafkaWriter: &kafka.Writer{
 				Addr:                   kafka.TCP(envConsts.KafkaBootstrap()),
 				Topic:                  fmt.Sprintf("%s-app-replication", envConsts.Region()),

@@ -129,3 +129,11 @@ func KafkaCommitInterval() int {
 	}
 	return size
 }
+func KafkaNumReaders() int {
+	nOfReaders := mustGetInt("KAFKA_NUM_READERS")
+	if nOfReaders <= 0 {
+		panic(fmt.Sprintf("KAFKA_NUM_READERS must be greater than 0, got: %d", nOfReaders))
+
+	}
+	return nOfReaders
+}
