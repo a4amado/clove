@@ -128,7 +128,7 @@ func UserConnect(w http.ResponseWriter, r *http.Request) {
 	ch := pubSub.Channel()
 
 	// Internal channel for communication between goroutines
-	writeCh := make(chan []byte, 100)
+	writeCh := make(chan []byte, 10000)
 
 	wg := sync.WaitGroup{}
 	wg.Go(func() {

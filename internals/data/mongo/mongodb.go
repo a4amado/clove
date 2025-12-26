@@ -2,7 +2,6 @@ package mongoDB
 
 import (
 	envConsts "clove/internals/consts/env"
-	"os"
 	"sync"
 
 	"github.com/joho/godotenv"
@@ -16,7 +15,7 @@ var mongodbClientOnce = sync.Once{}
 func Init() {
 	godotenv.Load()
 	mongodbClientOnce.Do(func() {
-		client, err := mongo.Connect(options.Client().ApplyURI(os.Getenv(string(envConsts.MONGO_HISTORY_DATABASE_URL))))
+		client, err := mongo.Connect(options.Client().ApplyURI(envConsts.MongoHistoryDatabaseURL()))
 		if err != nil {
 			panic(err)
 		}

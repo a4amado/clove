@@ -5,11 +5,9 @@ import (
 	redisPool "clove/internals/data/redispool"
 	"clove/internals/repository"
 	"fmt"
-	"os"
 	"sync"
 	"time"
 
-	"github.com/joho/godotenv"
 	"github.com/redis/go-redis/v9"
 	"github.com/segmentio/kafka-go"
 )
@@ -28,30 +26,19 @@ var replication *MessageReplication
 
 func ReplicateMessage() *MessageReplication {
 
-	godotenv.Load()
-	region := os.Getenv(string(envConsts.REGION))
-	kafkaBootstrap := os.Getenv(string(envConsts.KAFKA_BOOTSTRAP))
-	currentMachineRegion := repository.Region(region)
-	if !currentMachineRegion.Valid() {
-		panic(fmt.Sprintf("no valid region set in environment variable, got: %q", region))
-	}
-	if kafkaBootstrap == "" {
-
-		panic("KAFKA_BOOTSTRAP environment variable not set")
-	}
 	MessageReplicationOnce.Do(func() {
 		replication = &MessageReplication{
 			conn: redisPool.Client(redisPool.RedisFanout),
 			localReader: kafka.NewReader(kafka.ReaderConfig{
-				Brokers:        []string{kafkaBootstrap},
-				Topic:          fmt.Sprintf("%s-msg-replication", currentMachineRegion),
-				GroupID:        fmt.Sprintf("%s-msg-replication-group", currentMachineRegion),
-				QueueCapacity:  1000,
-				CommitInterval: 10 * time.Second,
+				Brokers:        []string{envConsts.KafkaBootstrap()},
+				Topic:          fmt.Sprintf("%s-msg-replication", envConsts.Region()),
+				GroupID:        fmt.Sprintf("%s-msg-replication-group", envConsts.Region()),
+				QueueCapacity:  envConsts.KafkaReaderBufferSize(),
+				CommitInterval: time.Duration(envConsts.KafkaCommitInterval()) * time.Second,
 			}),
 			crossRegionWriters: map[repository.Region]*kafka.Writer{
 				repository.RegionDk1: {
-					Addr:                   kafka.TCP(kafkaBootstrap),
+					Addr:                   kafka.TCP(envConsts.KafkaBootstrap()),
 					Topic:                  fmt.Sprintf("%s-msg-replication", repository.RegionDk1),
 					Balancer:               &kafka.RoundRobin{},
 					MaxAttempts:            3,
@@ -61,9 +48,9 @@ func ReplicateMessage() *MessageReplication {
 					Compression:            kafka.Gzip,
 				},
 			},
-			localRegion: repository.RegionDk1,
+			localRegion: envConsts.Region(),
 			localKafkaWriter: &kafka.Writer{
-				Addr:                   kafka.TCP(kafkaBootstrap),
+				Addr:                   kafka.TCP(envConsts.KafkaBootstrap()),
 				Topic:                  fmt.Sprintf("%s-msg-replication", repository.RegionDk1),
 				Balancer:               &kafka.RoundRobin{},
 				MaxAttempts:            3,
