@@ -15,6 +15,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -125,18 +126,68 @@ func UserConnect(w http.ResponseWriter, r *http.Request) {
 		ChannelId: channel,
 	}))
 	ch := pubSub.Channel()
-	for {
-		select {
-		case ch, ok := <-ch:
-			if !ok {
+
+	// Internal channel for communication between goroutines
+	writeCh := make(chan []byte, 100)
+
+	wg := sync.WaitGroup{}
+	wg.Go(func() {
+		for {
+			select {
+			case msg, ok := <-ch:
+				if !ok {
+					return
+				}
+				select {
+				case writeCh <- []byte(msg.Payload):
+				case <-ctx.Done():
+					return
+				}
+			case <-ctx.Done():
 				return
 			}
-			err := conn.WriteMessage(websocket.BinaryMessage, []byte(ch.Payload))
-			if err != nil {
-				return
-			}
-		case <-ctx.Done():
-			return
 		}
-	}
+	})
+	lock := sync.Mutex{}
+
+	// Goroutine 1: Write to websocket
+	wg.Go(func() {
+		for {
+			select {
+			case data, ok := <-writeCh:
+				if !ok {
+					return
+				}
+				lock.Lock()
+				err := conn.WriteMessage(websocket.BinaryMessage, data)
+				lock.Unlock()
+				if err != nil {
+					return
+				}
+			case <-ctx.Done():
+				return
+			}
+		}
+	})
+
+	// Goroutine 2: Write to websocket
+	wg.Go(func() {
+		for {
+			select {
+			case data, ok := <-writeCh:
+				if !ok {
+					return
+				}
+				lock.Lock()
+				err := conn.WriteMessage(websocket.BinaryMessage, data)
+				lock.Unlock()
+				if err != nil {
+					return
+				}
+			case <-ctx.Done():
+				return
+			}
+		}
+	})
+	wg.Wait()
 }

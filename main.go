@@ -8,7 +8,6 @@ import (
 	Api "clove/internals/handlers/api"
 	"clove/internals/meridian"
 	"clove/internals/meridian/fanout"
-	MessageReplication "clove/internals/meridian/replication/message-replication"
 	"clove/internals/repository"
 	"context"
 	_ "embed"
@@ -78,11 +77,11 @@ func main() {
 			ticker := time.NewTicker(time.Nanosecond * 10)
 
 			for range ticker.C {
-				meridian.Client().ReplicateMessage().PublishInternalReplicatableDeliveryMsgToKafkaGlobaly(context.Background(), MessageReplication.InternalReplicatableDeliveryMsg{
-					AppID:     uuid.MustParse("ea3d77cc-0fbd-4c9e-a30d-957d74894d81"),
-					ChannelId: "test",
-					Payload:   []byte(time.Now().String()),
-				})
+				// meridian.Client().ReplicateMessage().PublishInternalReplicatableDeliveryMsgToKafkaGlobaly(context.Background(), MessageReplication.InternalReplicatableDeliveryMsg{
+				// 	AppID:     uuid.MustParse("ea3d77cc-0fbd-4c9e-a30d-957d74894d81"),
+				// 	ChannelId: "test",
+				// 	Payload:   []byte(time.Now().String()),
+				// })
 			}
 
 		}()

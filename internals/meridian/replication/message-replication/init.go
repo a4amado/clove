@@ -43,9 +43,11 @@ func ReplicateMessage() *MessageReplication {
 		replication = &MessageReplication{
 			conn: redisPool.Client(redisPool.RedisFanout),
 			localReader: kafka.NewReader(kafka.ReaderConfig{
-				Brokers: []string{kafkaBootstrap},
-				Topic:   fmt.Sprintf("%s-msg-replication", currentMachineRegion),
-				GroupID: fmt.Sprintf("%s-msg-replication-group", currentMachineRegion),
+				Brokers:        []string{kafkaBootstrap},
+				Topic:          fmt.Sprintf("%s-msg-replication", currentMachineRegion),
+				GroupID:        fmt.Sprintf("%s-msg-replication-group", currentMachineRegion),
+				QueueCapacity:  1000,
+				CommitInterval: 10 * time.Second,
 			}),
 			crossRegionWriters: map[repository.Region]*kafka.Writer{
 				repository.RegionDk1: {
