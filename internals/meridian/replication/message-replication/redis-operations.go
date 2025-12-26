@@ -5,17 +5,17 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/redis/go-redis/v9"
+	"github.com/valkey-io/valkey-go/valkeycompat"
 )
 
 // Fanout message from kafka to the users
 func (c *MessageReplication) PublishFanoutMessageToWebsocket(ctx context.Context, msg InternalReplicatableDeliveryMsg) error {
-	res := c.conn.Publish(ctx, c.FormatChannelKey(msg.AppID, msg.ChannelId), msg.Payload)
-	return res.Err()
+	adapter := valkeycompat.NewAdapter(c.conn)
+	return adapter.Publish(ctx, c.FormatChannelKey(msg.AppID, msg.ChannelId), valkeycompat.BytesToString(msg.Payload)).Err()
 }
-func (c *MessageReplication) SubscribeFanoutMessage(ctx context.Context, channels []string) *redis.PubSub {
-	return c.conn.Subscribe(ctx, channels...)
-
+func (c *MessageReplication) SubscribeFanoutMessage(ctx context.Context, channels []string) valkeycompat.PubSub {
+	adapter := valkeycompat.NewAdapter(c.conn)
+	return adapter.Subscribe(ctx, channels...)
 }
 func (c *MessageReplication) FormatChannelKey(app uuid.UUID, channel string) string {
 	return fmt.Sprintf("%s:%s", app.String(), channel)

@@ -2,18 +2,18 @@ package MessageReplication
 
 import (
 	envConsts "clove/internals/consts/env"
-	redisPool "clove/internals/data/redispool"
+	"clove/internals/data/valkeyPool"
 	"clove/internals/repository"
 	"fmt"
 	"sync"
 	"time"
 
-	"github.com/redis/go-redis/v9"
 	"github.com/segmentio/kafka-go"
+	"github.com/valkey-io/valkey-go"
 )
 
 type MessageReplication struct {
-	conn               *redis.Client
+	conn               valkey.Client
 	crossRegionWriters map[repository.Region]*kafka.Writer
 	localRegion        repository.Region
 	localKafkaWriter   *kafka.Writer
@@ -38,7 +38,7 @@ func ReplicateMessage() *MessageReplication {
 			})
 		}
 		replication = &MessageReplication{
-			conn:         redisPool.Client(redisPool.RedisFanout),
+			conn:         valkeyPool.Client(valkeyPool.RedisFanout),
 			localReaders: readers,
 			crossRegionWriters: map[repository.Region]*kafka.Writer{
 				repository.RegionDk1: {

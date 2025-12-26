@@ -2,14 +2,14 @@
 //
 // Meridian maintains the global routing registry through a multi-tier storage architecture:
 //   - PostgreSQL: Source of truth for persistent routing state
-//   - Redis: Local cache for sub-millisecond route lookups
+//   - Valkey: Local cache for sub-millisecond route lookups
 //   - Kafka: Event stream for global state propagation
 //
 // Architecture:
 //
 //	Producer: Publishes local routing changes to Kafka for global replication
-//	Consumer: Ingests routing updates from Kafka and materializes them in local Redis
-//	Query Interface: Serves routing lookups from Redis with PostgreSQL fallback
+//	Consumer: Ingests routing updates from Kafka and materializes them in local Valkey
+//	Query Interface: Serves routing lookups from Valkey with PostgreSQL fallback
 //
 // This design ensures eventual consistency across distributed Clove instances while
 // maintaining low-latency access to routing data.
@@ -29,7 +29,7 @@ type Meridian struct {
 var meridianOnce *Meridian
 var once = sync.Once{}
 
-// Client returns the singleton Meridian instance with role-specific Redis connections
+// Client returns the singleton Meridian instance with role-specific Valkey connections
 // (store, fan-out, heartbeat) initialized from the package redisPool.
 // Initialization is performed exactly once and is safe for concurrent use.
 func Client() *Meridian {

@@ -11,7 +11,7 @@ import (
 )
 
 // StartKafkaToRedisBridge starts a Kafka consumer that continuously reads app
-// replication messages and saves them to the local Redis instance.
+// replication messages and saves them to the local Valkey instance.
 // This function blocks until the context is cancelled.
 
 func (c *MessageReplication) BridgeKafkaInternalDelevieryReplicatorToRedis(ctx context.Context) {
@@ -58,9 +58,8 @@ func (c *MessageReplication) BridgeKafkaInternalDelevieryReplicatorToRedis(ctx c
 						ChannelId: "test",
 					})
 
-					res := fanoutClient.Publish(ctx, key, appMsg.Payload)
-					if res.Err() != nil {
-						log.Printf("redis publish error: %v", res.Err())
+					if err := fanoutClient.Publish(ctx, key, appMsg.Payload); err != nil {
+						log.Printf("valkey publish error: %v", err)
 						continue
 					}
 

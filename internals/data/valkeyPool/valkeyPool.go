@@ -1,4 +1,4 @@
-package redisPool
+package valkeyPool
 
 import (
 	envConsts "clove/internals/consts/env"
@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"github.com/joho/godotenv"
-	goRedis "github.com/redis/go-redis/v9"
+	"github.com/valkey-io/valkey-go"
 )
 
 type RedisDB int
@@ -17,47 +17,56 @@ const (
 	RedisFanout    RedisDB = 2
 )
 
-// Client returns the singleton Redis client for the specified RedisDB pool.
+// Client returns the singleton Valkey client for the specified RedisDB pool.
 // Init() must be called before using Client(), or the returned client will be nil.
 // Panics if an invalid pool type is provided.
-var redisStoreConn *goRedis.Client
+var redisStoreConn valkey.Client
 var redisStoreConnOnce = sync.Once{}
-var redisFanoutConn *goRedis.Client
+var redisFanoutConn valkey.Client
 var redisFanoutConnOnce = sync.Once{}
-var redisHeartbeatConn *goRedis.Client
+var redisHeartbeatConn valkey.Client
 var redisHeartbeatConnOnce = sync.Once{}
 
-func Client(pool RedisDB) *goRedis.Client {
+func Client(pool RedisDB) valkey.Client {
 	wg := sync.WaitGroup{}
 	wg.Go(func() {
 		godotenv.Load()
 		redisStoreConnOnce.Do(func() {
-			opts, err := goRedis.ParseURL(envConsts.RedisStoreURL())
+			opts, err := valkey.ParseURL(envConsts.RedisStoreURL())
 			if err != nil {
 				panic(err)
 			}
-			redisStoreConn = goRedis.NewClient(opts)
+			redisStoreConn, err = valkey.NewClient(opts)
+			if err != nil {
+				panic(err)
+			}
 		})
 	})
 
 	wg.Go(func() {
 
 		redisFanoutConnOnce.Do(func() {
-			opts, err := goRedis.ParseURL(envConsts.RedisFanoutURL())
+			opts, err := valkey.ParseURL(envConsts.RedisFanoutURL())
 			if err != nil {
 				panic(err)
 			}
-			redisFanoutConn = goRedis.NewClient(opts)
+			redisFanoutConn, err = valkey.NewClient(opts)
+			if err != nil {
+				panic(err)
+			}
 		})
 	})
 	wg.Go(func() {
 
 		redisHeartbeatConnOnce.Do(func() {
-			opts, err := goRedis.ParseURL(envConsts.RedisHeartbeatURL())
+			opts, err := valkey.ParseURL(envConsts.RedisHeartbeatURL())
 			if err != nil {
 				panic(err)
 			}
-			redisHeartbeatConn = goRedis.NewClient(opts)
+			redisHeartbeatConn, err = valkey.NewClient(opts)
+			if err != nil {
+				panic(err)
+			}
 		})
 	})
 	wg.Wait()
