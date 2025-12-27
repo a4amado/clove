@@ -1,7 +1,7 @@
 package AppReplication
 
 import (
-	"clove/internals/repository"
+	repository "clove/internals/services/generatedRepo"
 	"context"
 	"encoding/json"
 	"fmt"

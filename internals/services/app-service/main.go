@@ -2,7 +2,7 @@ package AppService
 
 import (
 	dbPool "clove/internals/data/postgres/pool"
-	"clove/internals/repository"
+	repository "clove/internals/services/generatedRepo"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )

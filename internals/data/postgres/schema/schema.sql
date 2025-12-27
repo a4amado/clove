@@ -18,3 +18,14 @@ CREATE TABLE "app" (
 
 create index app_id_idx on "app"("id");
 create index app_slug_idx on "app"("appSlug");
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp"; -- Enable the extension
+
+CREATE TABLE "user" (
+    "id" UUID PRIMARY KEY DEFAULT(uuid_generate_v4()),
+    "email" VARCHAR(255) UNIQUE NOT NULL,
+    "hash" TEXT NOT NULL,
+    "createdAt" TIMESTAMP DEFAULT NOW(),
+    "updatedAt" TIMESTAMP DEFAULT NOW()
+);
+ create index user_msg_idx on "user"("id");
+ create index user_email_idx on "user"("email");

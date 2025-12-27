@@ -1,6 +1,6 @@
 package appConsts
 
-import "clove/internals/repository"
+import repository "clove/internals/services/generatedRepo"
 
 // GetAppBufferSize returns the buffer size in bytes for the given application type.
 // Pro maps to 32 KB, Standard maps to 16 KB, and all other types map to 4 KB.

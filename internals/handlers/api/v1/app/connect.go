@@ -7,7 +7,7 @@ import (
 	headers "clove/internals/handlers/api/response-utils/consts"
 	"clove/internals/meridian"
 	"clove/internals/meridian/fanout"
-	"clove/internals/repository"
+	repository "clove/internals/services/generatedRepo"
 	"context"
 	"encoding/json"
 	"errors"
@@ -22,6 +22,7 @@ import (
 	"github.com/gorilla/websocket"
 	set "github.com/hashicorp/go-set"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const (
@@ -90,7 +91,10 @@ func UserConnect(w http.ResponseWriter, r *http.Request) {
 
 	// Cache miss - fetch from database
 	if app == nil {
-		dbApp, err := repository.New(dbPool.Client()).FindAppById(ctx, appUuid)
+		dbApp, err := repository.New(dbPool.Client()).FindAppById(ctx, pgtype.UUID{
+			Bytes: appUuid,
+			Valid: true,
+		})
 		if errors.Is(err, pgx.ErrNoRows) {
 			http.Error(w, "App not found", http.StatusNotFound)
 			return
@@ -156,12 +160,9 @@ func UserConnect(w http.ResponseWriter, r *http.Request) {
 				if !ok {
 					return
 				}
-				lock.Lock()
-				err := conn.WriteMessage(websocket.BinaryMessage, data)
-				lock.Unlock()
+				err := WriteToWebsocketWithLock(ctx, conn, &lock, websocket.BinaryMessage, data)
 				if err != nil {
 					return
-					lock.Unlock()
 
 				}
 			case <-ctx.Done():
@@ -171,4 +172,10 @@ func UserConnect(w http.ResponseWriter, r *http.Request) {
 	})
 
 	wg.Wait()
+}
+
+func WriteToWebsocketWithLock(ctx context.Context, conn *websocket.Conn, lock *sync.Mutex, msgType int, data []byte) error {
+	lock.Lock()
+	defer lock.Unlock()
+	return conn.WriteMessage(websocket.BinaryMessage, data)
 }

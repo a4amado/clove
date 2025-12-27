@@ -8,7 +8,7 @@ import (
 	"clove/internals/meridian"
 	"clove/internals/meridian/fanout"
 	MessageReplication "clove/internals/meridian/replication/message-replication"
-	"clove/internals/repository"
+	repository "clove/internals/services/generatedRepo"
 	"context"
 	_ "embed"
 	"fmt"

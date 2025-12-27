@@ -3,7 +3,7 @@ package AppReplication
 import (
 	envConsts "clove/internals/consts/env"
 	"clove/internals/data/valkeyPool"
-	"clove/internals/repository"
+	repository "clove/internals/services/generatedRepo"
 	"fmt"
 	"sync"
 	"time"

@@ -7,7 +7,7 @@
 package plans
 
 import (
-	"clove/internals/repository"
+	repository "clove/internals/services/generatedRepo"
 	"context"
 	"errors"
 

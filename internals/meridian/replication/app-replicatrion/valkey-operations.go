@@ -2,7 +2,7 @@ package AppReplication
 
 import (
 	"clove/internals/data/valkeyPool"
-	"clove/internals/repository"
+	repository "clove/internals/services/generatedRepo"
 	"context"
 	"encoding/json"
 	"fmt"
