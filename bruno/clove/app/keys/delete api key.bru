@@ -1,0 +1,16 @@
+meta {
+  name: delete api key
+  type: http
+  seq: 2
+}
+
+delete {
+  url: http://localhost:3000/api/v1/apps/28ce0816-1c40-40f7-8680-b2995d573615/tokens/beb1ae7e-01cf-4738-9b4f-0f9ca3ebeb33/
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

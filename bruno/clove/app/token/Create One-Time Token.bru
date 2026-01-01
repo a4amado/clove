@@ -1,0 +1,22 @@
+meta {
+  name: Create One-Time Token
+  type: http
+  seq: 1
+}
+
+post {
+  url: http://localhost:8080/api/v1/apps/7eec1afc-3201-4808-b5c0-16c72f100153/tokens/
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "channel_id": "ssssssssssss"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
