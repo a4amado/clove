@@ -8,11 +8,7 @@ import (
 )
 
 type RegionsCtx struct {
-	App   *appservicetypes.BaseLineAppCtx
-	AppId uuid.UUID
-}
-type RegionCtx struct {
-	App    *appservicetypes.BaseLineAppCtx
-	AppId  uuid.UUID
-	Region repository.Region
+	App     *appservicetypes.BaseLineAppCtx
+	AppId   uuid.UUID
+	Regions *[]repository.Region
 }

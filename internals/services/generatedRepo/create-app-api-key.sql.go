@@ -14,15 +14,16 @@ import (
 const createAppApiKey = `-- name: CreateAppApiKey :one
 
 INSERT INTO "app_api_key"
-("appId", "key")
+("appId", "key", "name")
 VALUES
-($1, $2)
-RETURNING id, "appId", "createdAt", "updatedAt", key
+($1, $2, $3)
+RETURNING id, "appId", "createdAt", "updatedAt", key, name
 `
 
 type CreateAppApiKeyParams struct {
 	AppID pgtype.UUID `json:"app_id"`
 	Key   pgtype.Text `json:"key"`
+	Name  pgtype.Text `json:"name"`
 }
 
 // CREATE TABLE "app_api_key" (
@@ -35,7 +36,7 @@ type CreateAppApiKeyParams struct {
 //
 // );
 func (q *Queries) CreateAppApiKey(ctx context.Context, arg CreateAppApiKeyParams) (AppApiKey, error) {
-	row := q.db.QueryRow(ctx, createAppApiKey, arg.AppID, arg.Key)
+	row := q.db.QueryRow(ctx, createAppApiKey, arg.AppID, arg.Key, arg.Name)
 	var i AppApiKey
 	err := row.Scan(
 		&i.ID,
@@ -43,6 +44,7 @@ func (q *Queries) CreateAppApiKey(ctx context.Context, arg CreateAppApiKeyParams
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Key,
+		&i.Name,
 	)
 	return i, err
 }

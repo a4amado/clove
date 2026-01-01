@@ -203,6 +203,7 @@ type AppApiKey struct {
 	CreatedAt pgtype.Timestamp `json:"created_at"`
 	UpdatedAt pgtype.Timestamp `json:"updated_at"`
 	Key       pgtype.Text      `json:"key"`
+	Name      pgtype.Text      `json:"name"`
 }
 
 type User struct {

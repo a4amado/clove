@@ -12,13 +12,22 @@ func (as *KeysCtx) List(page int32) ([]repository.AppApiKey, error) {
 		queries = queries.WithTx(*as.App.Tx)
 	}
 	if page <= 0 {
-		page = 1
+		page = 0
+	} else {
+		page = page - 1
 	}
-	return queries.ListAppApiKeys(as.App.ReqCtx, repository.ListAppApiKeysParams{
+	keys, err := queries.ListAppApiKeys(as.App.ReqCtx, repository.ListAppApiKeysParams{
 		AppID: pgtype.UUID{
 			Bytes: as.AppId,
 			Valid: true,
 		},
 		PageIdx: page,
 	})
+	if err != nil {
+		return nil, err
+	}
+	if keys == nil || len(keys) == 0 {
+		return []repository.AppApiKey{}, nil
+	}
+	return keys, nil
 }

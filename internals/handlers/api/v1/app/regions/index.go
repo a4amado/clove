@@ -1,4 +1,4 @@
-package AppKeysHandlersV1
+package AppRegionsHandlersV1
 
 import (
 	"github.com/go-chi/chi/v5"
@@ -8,8 +8,8 @@ import (
 // It registers a GET route at /app/{app_id}/ws handled by UserConnect and returns the router.
 func Routes() chi.Router {
 	router := chi.NewRouter()
-	router.Get("/", ListAppApiKeys)
-	router.Post("/", CreateAppApiKey)
-	router.Delete("/{key_id}/", DeleteAppApiKey)
+	router.Get("/", ListAppRegions)
+	router.Post("/", UpdateAppRegions)
+
 	return router
 }

@@ -8,7 +8,7 @@
 
 -- name: CreateAppApiKey :one
 INSERT INTO "app_api_key"
-("appId", "key")
+("appId", "key", "name")
 VALUES
-(@app_id, @key)
+(@app_id, @key, @name)
 RETURNING *;

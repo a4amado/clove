@@ -13,13 +13,13 @@ import (
 
 const addRegionToApp = `-- name: AddRegionToApp :one
 UPDATE "app"
-SET "region" = ARRAY_APPEND("region", $1::region)
+SET "region" = $1
 WHERE "id" = $2
 RETURNING "region"
 `
 
 type AddRegionToAppParams struct {
-	Region Region      `json:"region"`
+	Region []Region    `json:"region"`
 	ID     pgtype.UUID `json:"id"`
 }
 

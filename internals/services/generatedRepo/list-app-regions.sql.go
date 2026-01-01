@@ -15,7 +15,6 @@ const listAppRegions = `-- name: ListAppRegions :one
 SELECT "region"
 FROM "app"
 WHERE "id" = $1
-
 LIMIT 1
 `
 

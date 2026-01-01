@@ -5,17 +5,10 @@ import (
 	repository "clove/internals/services/generatedRepo"
 )
 
-func (as *AppServiceCtx) Region(region repository.Region) *appservice.RegionCtx {
-	return &appservice.RegionCtx{
-		App:    as.App,
-		AppId:  as.AppId,
-		Region: region,
-	}
-}
-
-func (as *AppServiceCtx) Regions() *appservice.RegionsCtx {
+func (as *AppServiceCtx) Regions(region *[]repository.Region) *appservice.RegionsCtx {
 	return &appservice.RegionsCtx{
-		App:   as.App,
-		AppId: as.AppId,
+		App:     as.App,
+		AppId:   as.AppId,
+		Regions: region,
 	}
 }

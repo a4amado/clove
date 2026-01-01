@@ -37,6 +37,10 @@ func CreateAppApiKey(w http.ResponseWriter, r *http.Request) {
 			String: uuid.NewString(),
 			Valid:  true,
 		},
+		Name: pgtype.Text{
+			String: body.Name,
+			Valid:  true,
+		},
 	})
 	if err != nil {
 		tx.Rollback(r.Context())
