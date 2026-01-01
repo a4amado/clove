@@ -1,15 +1,15 @@
 package appservice
 
 import (
-	appservicetypes "clove/internals/services/app-service/types"
+	"clove/internals/services/types"
 
 	"github.com/google/uuid"
 )
 
-type AppsServiceCtx struct {
-	App *appservicetypes.BaseLineAppCtx
+type AppsCtx struct {
+	BaseCtx types.BaseLineServiceCtx
 }
-type AppServiceCtx struct {
-	App   *appservicetypes.BaseLineAppCtx
-	AppId uuid.UUID
+type AppCtx struct {
+	BaseCtx types.BaseLineServiceCtx
+	AppID   uuid.UUID
 }

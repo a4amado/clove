@@ -36,7 +36,7 @@ func CreateApp(w http.ResponseWriter, r *http.Request) {
 
 	tx, _ := postgresPool.NewTx(r.Context(), pgx.TxOptions{})
 
-	app, err := services.Apps(r.Context(), &tx, true).Create(repository.InsertAppParams{
+	app, err := services.C(r.Context(), &tx, true).Apps().Create(repository.InsertAppParams{
 		AppSlug:        fmt.Sprintf("%s:%s", uuid.NewString(), body.AppSlug),
 		Regions:        body.Regions,
 		AppType:        repository.AppTypePro,
@@ -48,7 +48,7 @@ func CreateApp(w http.ResponseWriter, r *http.Request) {
 		tx.Rollback(r.Context())
 		return
 	}
-	appApiKey, err := services.App(r.Context(), &tx, true, app.App.ID.Bytes).Keys().Generate(repository.CreateAppApiKeyParams{
+	appApiKey, err := services.C(r.Context(), &tx, true).App(app.App.ID.Bytes).Keys().Create(repository.CreateAppApiKeyParams{
 		AppID: app.App.ID,
 		Key: pgtype.Text{
 			String: "ssssssss",

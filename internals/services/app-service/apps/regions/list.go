@@ -7,15 +7,15 @@ import (
 )
 
 func (as *RegionsCtx) List() (*[]repository.Region, error) {
-	queries := as.App.Queries
-	if as.App.Tx != nil {
-		queries = queries.WithTx(*as.App.Tx)
+	queries := as.BaseCtx.Queries
+	if as.BaseCtx.Tx != nil {
+		queries = queries.WithTx(*as.BaseCtx.Tx)
 	}
 
-	if as.App.Cache {
+	if as.BaseCtx.Cache {
 		// log in the cache
 	}
-	region, err := queries.ListAppRegions(as.App.ReqCtx, pgtype.UUID{
+	region, err := queries.ListAppRegions(as.BaseCtx.ReqCtx, pgtype.UUID{
 		Bytes: as.AppId,
 		Valid: true,
 	})

@@ -6,16 +6,16 @@ import (
 	"github.com/google/uuid"
 )
 
-func (as *AppServiceCtx) Keys() *appservice.KeysCtx {
+func (as *AppCtx) Keys() *appservice.KeysCtx {
 	return &appservice.KeysCtx{
-		App:   as.App,
-		AppId: as.AppId,
+		BaseCtx: &as.BaseCtx,
+		AppID:   as.AppID,
 	}
 }
-func (as *AppServiceCtx) Key(id uuid.UUID) *appservice.KeyCtx {
+func (as *AppCtx) Key(id uuid.UUID) *appservice.KeyCtx {
 	return &appservice.KeyCtx{
-		App:   as.App,
-		AppId: as.AppId,
-		KeyId: id,
+		BaseCtx: &as.BaseCtx,
+		AppId:   as.AppID,
+		KeyId:   id,
 	}
 }

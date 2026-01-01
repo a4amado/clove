@@ -7,26 +7,26 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-func (as AppServiceCtx) Get() (*repository.App, error) {
-	queries := as.App.Queries
-	if as.App.Tx != nil {
-		queries = queries.WithTx(*as.App.Tx)
+func (as AppCtx) Get() (*repository.App, error) {
+	queries := as.BaseCtx.Queries
+	if as.BaseCtx.Tx != nil {
+		queries = queries.WithTx(*as.BaseCtx.Tx)
 	}
 
-	if as.App.Cache {
-		app, err := cache.Apps().Get(as.App.ReqCtx, as.AppId)
+	if as.BaseCtx.Cache {
+		app, err := cache.Apps().Get(as.BaseCtx.ReqCtx, as.AppID)
 		if err == nil {
 			return app, nil
 		}
 	}
-	app, err := queries.FindAppById(as.App.ReqCtx, pgtype.UUID{
-		Bytes: as.AppId,
+	app, err := queries.FindAppById(as.BaseCtx.ReqCtx, pgtype.UUID{
+		Bytes: as.AppID,
 		Valid: true,
 	})
 	if err != nil {
 		return nil, err
 	}
-	err = cache.Apps().Set(as.App.ReqCtx, app)
+	err = cache.Apps().Set(as.BaseCtx.ReqCtx, app)
 	if err != nil {
 		return nil, err
 	}

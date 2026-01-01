@@ -14,8 +14,8 @@ func ListAppRegions(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid App ID", http.StatusBadRequest)
 		return
 	}
-	appSrvs := services.App(r.Context(), nil, true, appId)
-	regions, err := appSrvs.Regions(nil).List()
+	appSrvs := services.C(r.Context(), nil, true)
+	regions, err := appSrvs.App(appId).Regions().List()
 	if err != nil {
 		http.Error(w, "Failed To Fetch App Regions", http.StatusInternalServerError)
 		return

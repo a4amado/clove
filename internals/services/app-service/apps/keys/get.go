@@ -10,20 +10,20 @@ import (
 )
 
 func (a *KeyCtx) Get() (*pgtype.Text, error) {
-	q := a.App.Queries
-	if a.App.Tx != nil {
-		q = q.WithTx(*a.App.Tx)
+	q := a.BaseCtx.Queries
+	if a.BaseCtx.Tx != nil {
+		q = q.WithTx(*a.BaseCtx.Tx)
 	}
 
-	if a.App.Cache {
-		res, err := cache.Apps().Keys().Get(a.App.ReqCtx, a.AppId, a.KeyId)
+	if a.BaseCtx.Cache {
+		res, err := cache.Apps().Keys().Get(a.BaseCtx.ReqCtx, a.AppId, a.KeyId)
 		if err == nil {
 			return &pgtype.Text{
 				String: *res,
 				Valid:  true,
 			}, nil
 		}
-		key, err := q.GetAppApiKey(a.App.ReqCtx, repository.GetAppApiKeyParams{
+		key, err := q.GetAppApiKey(a.BaseCtx.ReqCtx, repository.GetAppApiKeyParams{
 			KeyID: pgtype.UUID{
 				Bytes: a.KeyId,
 				Valid: true,
@@ -59,7 +59,7 @@ func (a *KeyCtx) Get() (*pgtype.Text, error) {
 			Valid:  true,
 		}, nil
 	}
-	key, err := q.GetAppApiKey(a.App.ReqCtx, repository.GetAppApiKeyParams{
+	key, err := q.GetAppApiKey(a.BaseCtx.ReqCtx, repository.GetAppApiKeyParams{
 		KeyID: pgtype.UUID{
 			Bytes: a.KeyId,
 			Valid: true,

@@ -101,7 +101,7 @@ func UserConnect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Try cache
-	app, err := services.App(ctx, nil, true, appUUID).Get()
+	app, err := services.C(ctx, nil, true).App(appUUID).Get()
 
 	if err != nil {
 		fmt.Println(err.Error())

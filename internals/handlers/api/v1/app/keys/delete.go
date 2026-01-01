@@ -24,7 +24,7 @@ func DeleteAppApiKey(w http.ResponseWriter, r *http.Request) {
 
 	tx, _ := postgresPool.NewTx(r.Context(), pgx.TxOptions{})
 	tx.Begin(r.Context())
-	n, err := services.App(r.Context(), &tx, true, apId).Key(AppApiKey).Delete()
+	n, err := services.C(r.Context(), &tx, true).App(apId).Key(AppApiKey).Delete()
 
 	if err != nil {
 		http.Error(w, "Failed to delete api key", http.StatusBadRequest)

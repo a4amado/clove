@@ -7,12 +7,17 @@ meta {
 post {
   url: http://localhost:8080/api/v1/apps/{{app_id}}/tokens/
   body: json
-  auth: inherit
+  auth: bearer
+}
+
+auth:bearer {
+  token: sk-GSYNVwen8BqCMm14SjLu61K7MWsUQmeoj-sD5VOu49LmlctP_UIbFa6ofjZ0tV0PM-ANx5Wx3cdPi1j5I5owWw
 }
 
 body:json {
   {
-    "channel_id": "ssssssssssss"
+    "channel_id": "ssssssssssss",
+    "api_key_id": "d4daa437-19f8-4a1e-b9fe-2d4b8ffc13ec"
   }
 }
 

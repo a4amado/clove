@@ -1,6 +1,7 @@
 package AppKeysHandlersV1
 
 import (
+	"clove/internals/apiguard"
 	postgresPool "clove/internals/data/postgres/pool"
 	"clove/internals/services"
 	repository "clove/internals/services/generatedRepo"
@@ -31,10 +32,16 @@ func CreateAppApiKey(w http.ResponseWriter, r *http.Request) {
 		tx.Rollback(r.Context())
 		return
 	}
-	api, err := services.App(r.Context(), &tx, true, apId).Keys().Generate(repository.CreateAppApiKeyParams{
+	randomKey, err := apiguard.RandomSecretKey()
+	if err != nil {
+		http.Error(w, "Failed To Generate Random Secret Key", http.StatusInternalServerError)
+		tx.Rollback(r.Context())
+		return
+	}
+	api, err := services.C(r.Context(), &tx, true).App(apId).Keys().Create(repository.CreateAppApiKeyParams{
 		AppID: pgtype.UUID{Bytes: apId, Valid: true},
 		Key: pgtype.Text{
-			String: uuid.NewString(),
+			String: randomKey,
 			Valid:  true,
 		},
 		Name: pgtype.Text{

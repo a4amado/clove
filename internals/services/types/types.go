@@ -8,7 +8,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type BaseLineAppCtx struct {
+type BaseLineServiceCtx struct {
 	Pool    *pgxpool.Pool
 	Queries *repository.Queries
 	Tx      *pgx.Tx

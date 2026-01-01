@@ -9,18 +9,18 @@ import (
 	"github.com/google/uuid"
 )
 
-func (a *KeysCtx) Generate(args repository.CreateAppApiKeyParams) (*repository.AppApiKey, error) {
-	q := a.App.Queries
-	if a.App.Tx != nil {
-		q = q.WithTx(*a.App.Tx)
+func (a *KeysCtx) Create(args repository.CreateAppApiKeyParams) (*repository.AppApiKey, error) {
+	q := a.BaseCtx.Queries
+	if a.BaseCtx.Tx != nil {
+		q = q.WithTx(*a.BaseCtx.Tx)
 	}
 
-	key, err := q.CreateAppApiKey(a.App.ReqCtx, args)
+	key, err := q.CreateAppApiKey(a.BaseCtx.ReqCtx, args)
 	if err != nil {
 		return nil, err
 	}
 
-	if a.App.Cache {
+	if a.BaseCtx.Cache {
 
 		go func(appId uuid.UUID, keyId uuid.UUID, apiKey string) {
 			ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second*2))

@@ -39,7 +39,7 @@ func UpdateAppRegions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = services.App(r.Context(), nil, true, appId).Regions(&body.Regions).Update()
+	err = services.C(r.Context(), nil, true).App(appId).Regions().Update(body.Regions)
 	if err != nil {
 		http.Error(w, "Failed To Update App Regions", http.StatusInternalServerError)
 		return

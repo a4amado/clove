@@ -11,8 +11,9 @@ import (
 )
 
 func ListAppApiKeys(w http.ResponseWriter, r *http.Request) {
-	apId, err := uuid.Parse(r.PathValue("app_id"))
-	if err != nil {
+	appId, err := uuid.Parse(r.PathValue("app_id"))
+
+	if err != nil || appId == uuid.Nil {
 		http.Error(w, "Invalid App ID", http.StatusBadRequest)
 		return
 	}
@@ -25,7 +26,7 @@ func ListAppApiKeys(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid page_idx search params '?page_idx=int'", http.StatusBadRequest)
 		return
 	}
-	keys, err := services.App(r.Context(), nil, true, apId).Keys().List(int32(page_idx))
+	keys, err := services.C(r.Context(), nil, true).App(appId).Keys().List(int32(page_idx))
 	for idx, key := range keys {
 		key.Key = pgtype.Text{
 			String: "[Redacted]",

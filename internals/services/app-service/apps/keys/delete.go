@@ -8,13 +8,13 @@ import (
 )
 
 func (a *KeyCtx) Delete() (int64, error) {
-	q := a.App.Queries
-	if a.App.Tx != nil {
-		q = q.WithTx(*a.App.Tx)
+	q := a.BaseCtx.Queries
+	if a.BaseCtx.Tx != nil {
+		q = q.WithTx(*a.BaseCtx.Tx)
 	}
-	go cache.Apps().Keys().Delete(a.App.ReqCtx, a.AppId, a.KeyId)
+	go cache.Apps().Keys().Delete(a.BaseCtx.ReqCtx, a.AppId, a.KeyId)
 
-	return q.DeleteApiKey(a.App.ReqCtx, repository.DeleteApiKeyParams{
+	return q.DeleteApiKey(a.BaseCtx.ReqCtx, repository.DeleteApiKeyParams{
 		ID: pgtype.UUID{
 			Bytes: a.KeyId,
 			Valid: true,

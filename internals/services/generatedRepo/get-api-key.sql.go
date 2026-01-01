@@ -14,7 +14,7 @@ import (
 const getAppApiKey = `-- name: GetAppApiKey :one
 SELECT "key"
 FROM "app_api_key"
-WHERE "id" = $1 AND "appId" == $2
+WHERE "id" = $1 AND "appId" = $2
 limit 1
 `
 

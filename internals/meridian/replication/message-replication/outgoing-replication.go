@@ -83,7 +83,6 @@ func (mr *MessageReplication) PublishInternalReplicatableDeliveryMsgToRabbitMQGl
 		return []error{err}
 	}
 	errList := []error{}
-	fmt.Println(string(payload))
 	// Publish to local region
 	routingKey := fmt.Sprintf("%s.msg-replication", mr.localRegion)
 	err = mr.localRabbitMQChannel.PublishWithContext(
