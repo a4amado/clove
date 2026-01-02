@@ -2,6 +2,7 @@ package AppHandlersV1
 
 import (
 	"clove/internals/apiguard"
+	"clove/internals/apperrors"
 	postgresPool "clove/internals/data/postgres/pool"
 	"clove/internals/services"
 	repository "clove/internals/services/generatedRepo"
@@ -20,22 +21,47 @@ type CreateAppStruct struct {
 	UserId         pgtype.UUID         `json:"user_id"`
 	AllowedOrigins []string            `json:"allowed_origins"`
 }
+
 type CreateAppReponse struct {
 	repository.App `json:"app"`
 	Keys           []repository.AppApiKey `json:"keys"`
 }
 
-func CreateApp(w http.ResponseWriter, r *http.Request) {
+const (
+	ERROR_INVALID_CREATE_APP_BODY    = "ERROR_INVALID_CREATE_APP_BODY"
+	ERROR_FAILED_START_CREATE_APP_TX = "ERROR_FAILED_START_CREATE_APP_TX"
+	ERROR_FAILED_INSERT_APP_DB       = "ERROR_FAILED_INSERT_APP_DB"
+	ERROR_FAILED_GENERATE_API_KEY    = "ERROR_FAILED_GENERATE_API_KEY"
+	ERROR_FAILED_CREATE_API_KEY      = "ERROR_FAILED_CREATE_API_KEY"
+)
 
+func CreateApp(w http.ResponseWriter, r *http.Request) {
 	body := CreateAppStruct{}
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-
-		http.Error(w, "Failed to parse the body "+err.Error(), http.StatusBadRequest)
+		apperrors.WriteError(w, &apperrors.AppError{
+			Code:       ERROR_INVALID_CREATE_APP_BODY,
+			Message:    "",
+			StatusCode: http.StatusBadRequest,
+			Internal:   err,
+			ID:         uuid.New(),
+		})
 		return
 	}
 
-	tx, _ := postgresPool.NewTx(r.Context(), pgx.TxOptions{})
+	tx, err := postgresPool.NewTx(r.Context(), pgx.TxOptions{})
+	if err != nil {
+		apperrors.WriteError(w, &apperrors.AppError{
+			Code:       ERROR_FAILED_START_CREATE_APP_TX,
+			Message:    "",
+			StatusCode: http.StatusInternalServerError,
+			Internal:   err,
+			Request:    r,
+			ID:         uuid.New(),
+		})
+		return
+	}
+	defer tx.Rollback(r.Context()) // Always rollback on early return
 
 	app, err := services.C(r.Context(), &tx, true).Apps().Create(repository.InsertAppParams{
 		AppSlug:        fmt.Sprintf("%s:%s", uuid.NewString(), body.AppSlug),
@@ -45,15 +71,27 @@ func CreateApp(w http.ResponseWriter, r *http.Request) {
 		AllowedOrigins: body.AllowedOrigins,
 	})
 	if err != nil {
-		http.Error(w, "Failed create and app", http.StatusBadRequest)
-		tx.Rollback(r.Context())
+		apperrors.WriteError(w, &apperrors.AppError{
+			Code:       ERROR_FAILED_INSERT_APP_DB,
+			Message:    "",
+			StatusCode: http.StatusInternalServerError,
+			Internal:   err,
+			Request:    r,
+			ID:         uuid.New(),
+		})
 		return
 	}
 
 	key, err := apiguard.RandomSecretKey()
 	if err != nil {
-		http.Error(w, "Failed generate initial Key", http.StatusInternalServerError)
-		tx.Rollback(r.Context())
+		apperrors.WriteError(w, &apperrors.AppError{
+			Code:       ERROR_FAILED_GENERATE_API_KEY,
+			Message:    "",
+			StatusCode: http.StatusInternalServerError,
+			Internal:   err,
+			Request:    r,
+			ID:         uuid.New(),
+		})
 		return
 	}
 
@@ -68,14 +106,34 @@ func CreateApp(w http.ResponseWriter, r *http.Request) {
 		},
 	})
 	if err != nil {
-		http.Error(w, "Failed to create app key", http.StatusBadRequest)
-		tx.Rollback(r.Context())
+		apperrors.WriteError(w, &apperrors.AppError{
+			Code:       ERROR_FAILED_CREATE_API_KEY,
+			Message:    "",
+			StatusCode: http.StatusInternalServerError,
+			Internal:   err,
+			Request:    r,
+			ID:         uuid.New(),
+		})
 		return
 	}
+
 	res := CreateAppReponse{
 		App:  app.App,
 		Keys: []repository.AppApiKey{*appApiKey},
 	}
+
+	if err := tx.Commit(r.Context()); err != nil {
+		apperrors.WriteError(w, &apperrors.AppError{
+			Code:       "ERROR_FAILED_COMMIT_TX",
+			Message:    "",
+			StatusCode: http.StatusInternalServerError,
+			Internal:   err,
+			Request:    r,
+			ID:         uuid.New(),
+		})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(res)
-	tx.Commit(r.Context())
 }

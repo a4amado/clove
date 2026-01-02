@@ -6,7 +6,7 @@ meta {
 
 post {
   url: http://localhost:8080/api/v1/apps/{{app_id}}/entry/?app_key_id={{key_id}}&channel_id=1
-  body: json
+  body: file
   auth: bearer
 }
 
@@ -25,6 +25,10 @@ body:json {
     "app_key_id": "{{key_id}}",
     "channel_id": "1"
   }
+}
+
+body:file {
+  file: @file(D:\591711096_1604104523925009_9152603521964486608_n.jpg) @contentType(image/jpeg)
 }
 
 settings {

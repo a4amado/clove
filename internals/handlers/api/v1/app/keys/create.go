@@ -2,6 +2,7 @@ package AppKeysHandlersV1
 
 import (
 	"clove/internals/apiguard"
+	"clove/internals/apperrors"
 	postgresPool "clove/internals/data/postgres/pool"
 	"clove/internals/services"
 	repository "clove/internals/services/generatedRepo"
@@ -13,6 +14,16 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const (
+	ERROR_CREATE_APP_API_KEY_INVALID_APP_ID      = "ERROR_CREATE_APP_API_KEY_INVALID_APP_ID"
+	ERROR_CREATE_APP_API_KEY_FAILED_START_TX     = "ERROR_CREATE_APP_API_KEY_FAILED_START_TX"
+	ERROR_CREATE_APP_API_KEY_INVALID_BODY        = "ERROR_CREATE_APP_API_KEY_INVALID_BODY"
+	ERROR_CREATE_APP_API_KEY_FAILED_GENERATE_KEY = "ERROR_CREATE_APP_API_KEY_FAILED_GENERATE_KEY"
+	ERROR_CREATE_APP_API_KEY_FAILED_CREATE       = "ERROR_CREATE_APP_API_KEY_FAILED_CREATE"
+	ERROR_CREATE_APP_API_KEY_FAILED_ENCODE       = "ERROR_CREATE_APP_API_KEY_FAILED_ENCODE"
+	ERROR_CREATE_APP_API_KEY_FAILED_COMMIT       = "ERROR_CREATE_APP_API_KEY_FAILED_COMMIT"
+)
+
 type CreateAppApiTokenBody struct {
 	Name string `json:"name"`
 }
@@ -20,24 +31,58 @@ type CreateAppApiTokenBody struct {
 func CreateAppApiKey(w http.ResponseWriter, r *http.Request) {
 	apId, err := uuid.Parse(r.PathValue("app_id"))
 	if err != nil {
-		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		apperrors.WriteError(w, &apperrors.AppError{
+			Code:       ERROR_CREATE_APP_API_KEY_INVALID_APP_ID,
+			Message:    "",
+			StatusCode: http.StatusBadRequest,
+			Internal:   err,
+			ID:         uuid.New(),
+			Request:    r,
+		})
 		return
 	}
-	tx, _ := postgresPool.NewTx(r.Context(), pgx.TxOptions{})
+
+	tx, err := postgresPool.NewTx(r.Context(), pgx.TxOptions{})
+	if err != nil {
+		apperrors.WriteError(w, &apperrors.AppError{
+			Code:       ERROR_CREATE_APP_API_KEY_FAILED_START_TX,
+			Message:    "",
+			StatusCode: http.StatusInternalServerError,
+			Internal:   err,
+			ID:         uuid.New(),
+			Request:    r,
+		})
+		return
+	}
+	defer tx.Rollback(r.Context())
 
 	body := CreateAppApiTokenBody{}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		http.Error(w, "Failed To Parse Body", http.StatusBadRequest)
-		tx.Rollback(r.Context())
+		apperrors.WriteError(w, &apperrors.AppError{
+			Code:       ERROR_CREATE_APP_API_KEY_INVALID_BODY,
+			Message:    "",
+			StatusCode: http.StatusBadRequest,
+			Internal:   err,
+			ID:         uuid.New(),
+			Request:    r,
+		})
 		return
 	}
+
 	randomKey, err := apiguard.RandomSecretKey()
 	if err != nil {
-		http.Error(w, "Failed To Generate Random Secret Key", http.StatusInternalServerError)
-		tx.Rollback(r.Context())
+		apperrors.WriteError(w, &apperrors.AppError{
+			Code:       ERROR_CREATE_APP_API_KEY_FAILED_GENERATE_KEY,
+			Message:    "",
+			StatusCode: http.StatusInternalServerError,
+			Internal:   err,
+			ID:         uuid.New(),
+			Request:    r,
+		})
 		return
 	}
+
 	api, err := services.C(r.Context(), &tx, true).App(apId).Keys().Create(repository.CreateAppApiKeyParams{
 		AppID: pgtype.UUID{Bytes: apId, Valid: true},
 		Key: pgtype.Text{
@@ -50,15 +95,34 @@ func CreateAppApiKey(w http.ResponseWriter, r *http.Request) {
 		},
 	})
 	if err != nil {
-		tx.Rollback(r.Context())
-		http.Error(w, "Failed To Create Token", http.StatusInternalServerError)
+		apperrors.WriteError(w, &apperrors.AppError{
+			Code:       ERROR_CREATE_APP_API_KEY_FAILED_CREATE,
+			Message:    "",
+			StatusCode: http.StatusInternalServerError,
+			Internal:   err,
+			ID:         uuid.New(),
+			Request:    r,
+		})
 		return
 	}
-	if err := json.NewEncoder(w).Encode(api); err != nil {
-		tx.Rollback(r.Context())
-		http.Error(w, "Internal server Error", http.StatusInternalServerError)
-		return
-	}
-	tx.Commit(r.Context())
 
+	if err := tx.Commit(r.Context()); err != nil {
+		apperrors.WriteError(w, &apperrors.AppError{
+			Code:       ERROR_CREATE_APP_API_KEY_FAILED_COMMIT,
+			Message:    "",
+			StatusCode: http.StatusInternalServerError,
+			Internal:   err,
+			ID:         uuid.New(),
+			Request:    r,
+		})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	if err := json.NewEncoder(w).Encode(api); err != nil {
+		// Can't write error after headers sent, just log it
+		// In production, use proper logging here
+		return
+	}
 }
