@@ -1,6 +1,7 @@
 package AppHandlersV1
 
 import (
+	"clove/internals/apiguard"
 	postgresPool "clove/internals/data/postgres/pool"
 	"clove/internals/services"
 	repository "clove/internals/services/generatedRepo"
@@ -48,11 +49,22 @@ func CreateApp(w http.ResponseWriter, r *http.Request) {
 		tx.Rollback(r.Context())
 		return
 	}
+
+	key, err := apiguard.RandomSecretKey()
+	if err != nil {
+		http.Error(w, "Failed generate initial Key", http.StatusInternalServerError)
+		tx.Rollback(r.Context())
+		return
+	}
+
 	appApiKey, err := services.C(r.Context(), &tx, true).App(app.App.ID.Bytes).Keys().Create(repository.CreateAppApiKeyParams{
 		AppID: app.App.ID,
 		Key: pgtype.Text{
-			String: "ssssssss",
+			String: key,
 			Valid:  true,
+		},
+		Name: pgtype.Text{
+			String: "Clove: Initial Auto Generated Key",
 		},
 	})
 	if err != nil {

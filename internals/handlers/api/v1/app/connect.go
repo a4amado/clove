@@ -1,6 +1,7 @@
 package AppHandlersV1
 
 import (
+	"clove/internals/apiguard"
 	appConsts "clove/internals/consts/app"
 	headers "clove/internals/handlers/api/response-utils/consts"
 	"clove/internals/heartbeat/dogpile"
@@ -78,17 +79,9 @@ func UserConnect(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid app ID", http.StatusBadRequest)
 		return
 	}
-	channel := r.URL.Query().Get("channel")
-	Authorization := r.Header.Get("Authorization")
-	idx := strings.Index(Authorization, " ")
-	if idx == -1 {
+	token := apiguard.GetHeaderApi(r)
 
-		http.Error(w, "", http.StatusForbidden)
-		return
-	}
-	bearer := Authorization[idx+1:]
-
-	claims, err := tokenguard.ValidateOneTimeToken(bearer)
+	claims, err := tokenguard.ValidateOneTimeToken(token)
 	if err != nil {
 		fmt.Println(err.Error())
 
@@ -114,11 +107,11 @@ func UserConnect(w http.ResponseWriter, r *http.Request) {
 	fanoutClient := meridian.Client().Fanout()
 	fmt.Println("Subscribed to: ", fanoutClient.FormatChannelKey(fanout.ChannelKey{
 		AppID:     appUUID,
-		ChannelID: channel,
+		ChannelID: claims.ChannelID,
 	}))
 	pubsub := fanout.Fanout().Subscribe(ctx, fanoutClient.FormatChannelKey(fanout.ChannelKey{
 		AppID:     appUUID,
-		ChannelID: channel,
+		ChannelID: claims.ChannelID,
 	}))
 	messageChannel := pubsub.Channel()
 

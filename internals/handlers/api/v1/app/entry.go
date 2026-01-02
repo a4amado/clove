@@ -1,8 +1,10 @@
 package AppHandlersV1
 
 import (
+	"clove/internals/apiguard"
 	"clove/internals/meridian"
 	MessageReplication "clove/internals/meridian/replication/message-replication"
+	"clove/internals/services"
 	"encoding/json"
 	"net/http"
 
@@ -10,49 +12,40 @@ import (
 )
 
 type MessageEntryBody struct {
-	ChannelID string `json:"channel_id"`
-	Payload   string `json:"payload"`
+	ChannelID string    `json:"channel_id"`
+	Payload   string    `json:"payload"`
+	AppKeyId  uuid.UUID `json:"app_key_id"`
 }
 
 func MessageEntry(w http.ResponseWriter, r *http.Request) {
 
-	appIdStr := r.PathValue("app_id")
-
-	appId, err := uuid.Parse(appIdStr)
+	appId, err := uuid.Parse(r.PathValue("app_id"))
 	if err != nil {
 		http.Error(w, "Invalid App ID", http.StatusUnauthorized)
 		return
 	}
-	// !: disabled for dev
-	// token := r.Header.Get("Authorization")
-	// splitToken := strings.Split(token, " ")
-	// if len(splitToken) != 2 {
-	// 	http.Error(w, "Invalid Token", http.StatusUnauthorized)
-	// 	return
-	// }
 
-	// claims, err := tokenguard.ValidateOneTimeToken(token)
-	// if err != nil {
-	// 	http.Error(w, "Invalid Token", http.StatusForbidden)
-	// 	return
-	// }
+	apiHeadersKey := apiguard.GetHeaderApi(r)
 
-	// // Wrap the body with MaxBytesReader to enforce size limit
-	// r.Body = http.MaxBytesReader(w, r.Body, plans.GetPlanMessageSizeLimit(claims.App.AppType))
-	// defer r.Body.Close()
-	// if err != nil {
-	// 	http.Error(w, "Failed to read body", http.StatusBadRequest)
-	// 	return
-	// }
-	// if plans.DoesMessageSizeExceedsLimit(claims.App.AppType, int64(len(body))) {
-	// 	http.Error(w, "Message size exceeds limit", http.StatusRequestEntityTooLarge)
-	// 	return
-	// }
+	// Wrap the body with MaxBytesReader to enforce size limit
+	r.Body = http.MaxBytesReader(w, r.Body, 1_000_000)
+	defer r.Body.Close()
 
 	body := MessageEntryBody{}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		http.Error(w, "Bad ssssssssss", http.StatusBadRequest)
+		http.Error(w, "Bad Body", http.StatusBadRequest)
+		return
+	}
+
+	appSrvs := services.C(r.Context(), nil, true)
+	Apikey, err := appSrvs.App(appId).Key(body.AppKeyId).Get()
+	if err != nil {
+		http.Error(w, "Invalid ApiKey", http.StatusBadRequest)
+		return
+	}
+	if Apikey.String != apiHeadersKey {
+		http.Error(w, "Invalid ApiKey", http.StatusBadRequest)
 		return
 	}
 	errList := meridian.Client().ReplicateMessage().PublishInternalReplicatableDeliveryMsgToLocalRabbitMQ(r.Context(), MessageReplication.InternalReplicatableDeliveryMsg{

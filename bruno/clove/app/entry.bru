@@ -7,12 +7,18 @@ meta {
 post {
   url: http://localhost:8080/api/v1/apps/{{app_id}}/entry/
   body: json
-  auth: inherit
+  auth: bearer
+}
+
+auth:bearer {
+  token: sk-ja_KETIBX0FuPtFVOqENAH4izE8IMJvyrM_cucWVYJ1QSbmiZnF3SydbIixaQ2x-L_TnRV4XEjG39mFyxyPkfg
 }
 
 body:json {
   {
-    "payload": "fasdasdasds"
+    "payload": "fasdasdasds",
+    "app_key_id": "{{key_id}}",
+    "channel_id": "1"
   }
 }
 

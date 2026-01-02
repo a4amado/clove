@@ -11,14 +11,19 @@ post {
 }
 
 auth:bearer {
-  token: sk-GSYNVwen8BqCMm14SjLu61K7MWsUQmeoj-sD5VOu49LmlctP_UIbFa6ofjZ0tV0PM-ANx5Wx3cdPi1j5I5owWw
+  token: {{api_key}}
 }
 
 body:json {
   {
-    "channel_id": "ssssssssssss",
-    "api_key_id": "d4daa437-19f8-4a1e-b9fe-2d4b8ffc13ec"
+    "api_key_id": "{{key_id}}",
+    "channel_id": "{{channel_id}}"
   }
+}
+
+vars:pre-request {
+  app_key_id: 
+  api_key: sk-ja_KETIBX0FuPtFVOqENAH4izE8IMJvyrM_cucWVYJ1QSbmiZnF3SydbIixaQ2x-L_TnRV4XEjG39mFyxyPkfg
 }
 
 settings {
