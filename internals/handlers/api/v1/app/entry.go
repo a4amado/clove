@@ -5,17 +5,11 @@ import (
 	"clove/internals/meridian"
 	MessageReplication "clove/internals/meridian/replication/message-replication"
 	"clove/internals/services"
-	"encoding/json"
+	"io"
 	"net/http"
 
 	"github.com/google/uuid"
 )
-
-type MessageEntryBody struct {
-	ChannelID string    `json:"channel_id"`
-	Payload   string    `json:"payload"`
-	AppKeyId  uuid.UUID `json:"app_key_id"`
-}
 
 func MessageEntry(w http.ResponseWriter, r *http.Request) {
 
@@ -24,22 +18,24 @@ func MessageEntry(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid App ID", http.StatusUnauthorized)
 		return
 	}
-
+	app_key_id, err := uuid.Parse(r.URL.Query().Get("app_key_id"))
+	if err != nil {
+		http.Error(w, "Invalid key ID", http.StatusBadRequest)
+		return
+	}
+	channel_id := r.URL.Query().Get("channel_id")
+	if channel_id == "" {
+		http.Error(w, "Invalid channel ID", http.StatusBadRequest)
+		return
+	}
 	apiHeadersKey := apiguard.GetHeaderApi(r)
 
 	// Wrap the body with MaxBytesReader to enforce size limit
 	r.Body = http.MaxBytesReader(w, r.Body, 1_000_000)
 	defer r.Body.Close()
 
-	body := MessageEntryBody{}
-	err = json.NewDecoder(r.Body).Decode(&body)
-	if err != nil {
-		http.Error(w, "Bad Body", http.StatusBadRequest)
-		return
-	}
-
 	appSrvs := services.C(r.Context(), nil, true)
-	Apikey, err := appSrvs.App(appId).Key(body.AppKeyId).Get()
+	Apikey, err := appSrvs.App(appId).Key(app_key_id).Get()
 	if err != nil {
 		http.Error(w, "Invalid ApiKey", http.StatusBadRequest)
 		return
@@ -48,10 +44,15 @@ func MessageEntry(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid ApiKey", http.StatusBadRequest)
 		return
 	}
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Invalid Body", http.StatusBadRequest)
+		return
+	}
 	errList := meridian.Client().ReplicateMessage().PublishInternalReplicatableDeliveryMsgToLocalRabbitMQ(r.Context(), MessageReplication.InternalReplicatableDeliveryMsg{
-		ChannelID: body.ChannelID,
+		ChannelID: channel_id,
 		AppID:     appId,
-		Payload:   []byte(body.Payload),
+		Payload:   body,
 	})
 	if errList != nil {
 		http.Error(w, "Failed to replicate"+errList.Error(), http.StatusInternalServerError)
