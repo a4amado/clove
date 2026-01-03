@@ -14,6 +14,8 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type create_app_key_error string
+
 const (
 	ERROR_CREATE_APP_API_KEY_INVALID_APP_ID      = "ERROR_CREATE_APP_API_KEY_INVALID_APP_ID"
 	ERROR_CREATE_APP_API_KEY_FAILED_START_TX     = "ERROR_CREATE_APP_API_KEY_FAILED_START_TX"
@@ -31,7 +33,7 @@ type CreateAppApiTokenBody struct {
 func CreateAppApiKey(w http.ResponseWriter, r *http.Request) {
 	apId, err := uuid.Parse(r.PathValue("app_id"))
 	if err != nil {
-		apperrors.WriteError(w, &apperrors.AppError{
+		apperrors.WriteError(&w, &apperrors.AppError{
 			Code:       ERROR_CREATE_APP_API_KEY_INVALID_APP_ID,
 			Message:    "",
 			StatusCode: http.StatusBadRequest,
@@ -44,7 +46,7 @@ func CreateAppApiKey(w http.ResponseWriter, r *http.Request) {
 
 	tx, err := postgresPool.NewTx(r.Context(), pgx.TxOptions{})
 	if err != nil {
-		apperrors.WriteError(w, &apperrors.AppError{
+		apperrors.WriteError(&w, &apperrors.AppError{
 			Code:       ERROR_CREATE_APP_API_KEY_FAILED_START_TX,
 			Message:    "",
 			StatusCode: http.StatusInternalServerError,
@@ -59,7 +61,7 @@ func CreateAppApiKey(w http.ResponseWriter, r *http.Request) {
 	body := CreateAppApiTokenBody{}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		apperrors.WriteError(w, &apperrors.AppError{
+		apperrors.WriteError(&w, &apperrors.AppError{
 			Code:       ERROR_CREATE_APP_API_KEY_INVALID_BODY,
 			Message:    "",
 			StatusCode: http.StatusBadRequest,
@@ -72,7 +74,7 @@ func CreateAppApiKey(w http.ResponseWriter, r *http.Request) {
 
 	randomKey, err := apiguard.RandomSecretKey()
 	if err != nil {
-		apperrors.WriteError(w, &apperrors.AppError{
+		apperrors.WriteError(&w, &apperrors.AppError{
 			Code:       ERROR_CREATE_APP_API_KEY_FAILED_GENERATE_KEY,
 			Message:    "",
 			StatusCode: http.StatusInternalServerError,
@@ -95,7 +97,7 @@ func CreateAppApiKey(w http.ResponseWriter, r *http.Request) {
 		},
 	})
 	if err != nil {
-		apperrors.WriteError(w, &apperrors.AppError{
+		apperrors.WriteError(&w, &apperrors.AppError{
 			Code:       ERROR_CREATE_APP_API_KEY_FAILED_CREATE,
 			Message:    "",
 			StatusCode: http.StatusInternalServerError,
@@ -107,7 +109,7 @@ func CreateAppApiKey(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := tx.Commit(r.Context()); err != nil {
-		apperrors.WriteError(w, &apperrors.AppError{
+		apperrors.WriteError(&w, &apperrors.AppError{
 			Code:       ERROR_CREATE_APP_API_KEY_FAILED_COMMIT,
 			Message:    "",
 			StatusCode: http.StatusInternalServerError,

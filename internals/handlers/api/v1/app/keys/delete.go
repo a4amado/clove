@@ -21,7 +21,7 @@ const (
 func DeleteAppApiKey(w http.ResponseWriter, r *http.Request) {
 	apId, err := uuid.Parse(r.PathValue("app_id"))
 	if err != nil {
-		apperrors.WriteError(w, &apperrors.AppError{
+		apperrors.WriteError(&w, &apperrors.AppError{
 			ID:         uuid.New(),
 			Code:       ERROR_DELETE_APP_API_KEY_INVALID_APP_ID,
 			Message:    "",
@@ -33,7 +33,7 @@ func DeleteAppApiKey(w http.ResponseWriter, r *http.Request) {
 	}
 	AppApiKey, err := uuid.Parse(r.PathValue("key_id"))
 	if err != nil {
-		apperrors.WriteError(w, &apperrors.AppError{
+		apperrors.WriteError(&w, &apperrors.AppError{
 			ID:         uuid.New(),
 			Code:       ERROR_DELETE_APP_API_KEY_INVALID_KEY_ID,
 			Message:    "",
@@ -46,7 +46,7 @@ func DeleteAppApiKey(w http.ResponseWriter, r *http.Request) {
 
 	tx, err := postgresPool.NewTx(r.Context(), pgx.TxOptions{})
 	if err != nil {
-		apperrors.WriteError(w, &apperrors.AppError{
+		apperrors.WriteError(&w, &apperrors.AppError{
 			ID:         uuid.New(),
 			Code:       ERROR_DELETE_APP_FAILED_START_TX,
 			Message:    "",
@@ -60,7 +60,7 @@ func DeleteAppApiKey(w http.ResponseWriter, r *http.Request) {
 	n, err := services.C(r.Context(), &tx, true).App(apId).Key(AppApiKey).Delete()
 
 	if n == 0 || err != nil {
-		apperrors.WriteError(w, &apperrors.AppError{
+		apperrors.WriteError(&w, &apperrors.AppError{
 			ID:         uuid.New(),
 			Code:       ERROR_DELETE_APP_FAILED_DELETE_APP,
 			Message:    "",
@@ -73,7 +73,7 @@ func DeleteAppApiKey(w http.ResponseWriter, r *http.Request) {
 	}
 	err = tx.Commit(r.Context())
 	if err != nil {
-		apperrors.WriteError(w, &apperrors.AppError{
+		apperrors.WriteError(&w, &apperrors.AppError{
 			ID:         uuid.New(),
 			Code:       ERROR_DELETE_APP_FAILED_COMMIT,
 			Message:    "",

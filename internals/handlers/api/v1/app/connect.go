@@ -3,24 +3,19 @@ package AppHandlersV1
 import (
 	"clove/internals/apiguard"
 	"clove/internals/apperrors"
-	appConsts "clove/internals/consts/app"
-	headers "clove/internals/handlers/api/response-utils/consts"
 	"clove/internals/heartbeat/dogpile"
 	"clove/internals/meridian"
 	"clove/internals/meridian/fanout"
 	"clove/internals/services"
-	repository "clove/internals/services/generatedRepo"
 	"clove/internals/tokenguard"
 	"context"
 	"encoding/json"
 	"net/http"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
-	set "github.com/hashicorp/go-set"
 )
 
 const (
@@ -42,21 +37,6 @@ var dogpileInstance = dogpile.New()
 
 // newUpgrader creates a websocket.Upgrader configured with buffer sizes based on the app's type and an origin check using the app's AllowedOrigins.
 // The upgrader's CheckOrigin lowercases the request Origin header and allows the request only if it matches an entry in app.AllowedOrigins, which must be pre-normalized to lowercase.
-func newUpgrader(app *repository.App) websocket.Upgrader {
-	bufferSize := appConsts.GetAppBufferSize(app.AppType)
-
-	return websocket.Upgrader{
-		WriteBufferSize: bufferSize,
-		ReadBufferSize:  bufferSize,
-		CheckOrigin: func(r *http.Request) bool {
-			allowed := set.From(app.AllowedOrigins)
-			// this works under the assumption that app.AllowedOrigins are normalized on insert
-			origin := strings.ToLower(r.Header.Get(headers.Origin))
-			// make sure the request is coming from the authorized domain
-			return allowed.Contains(origin)
-		},
-	}
-}
 
 type MessageToClient struct {
 	Channel string `json:"channel"`
@@ -70,56 +50,15 @@ func (m *MessageToClient) Binary() ([]byte, error) {
 // UserConnect upgrades the incoming HTTP request to a WebSocket for the specified app
 // and subscribes the resulting connection to the requested channel(s).
 func UserConnect(w http.ResponseWriter, r *http.Request) {
+	lock := sync.Mutex{}
 	ctx := r.Context()
-
-	appUUID, err := uuid.Parse(r.PathValue("app_id"))
-	if err != nil {
-		apperrors.WriteError(w, &apperrors.AppError{
-			Code:       ERROR_USER_CONNECT_INVALID_APP_ID,
-			Message:    "",
-			StatusCode: http.StatusBadRequest,
-			Internal:   err,
-		})
-		return
-	}
-
-	token := apiguard.GetHeaderApi(r)
-	claims, err := tokenguard.ValidateOneTimeToken(token)
-	if err != nil {
-		apperrors.WriteError(w, &apperrors.AppError{
-			Code:       ERROR_USER_CONNECT_INVALID_TOKEN,
-			Message:    "",
-			StatusCode: http.StatusUnauthorized,
-			Internal:   err,
-		})
-		return
-	}
-
-	if claims.App.ID.String() != appUUID.String() {
-		apperrors.WriteError(w, &apperrors.AppError{
-			Code:       ERROR_USER_CONNECT_TOKEN_APP_MISMATCH,
-			Message:    "",
-			StatusCode: http.StatusForbidden,
-			Internal:   nil,
-		})
-		return
-	}
-
-	app, err := services.C(ctx, nil, true).App(appUUID).Get()
-	if err != nil {
-		apperrors.WriteError(w, &apperrors.AppError{
-			Code:       ERROR_USER_CONNECT_APP_NOT_FOUND,
-			Message:    "",
-			StatusCode: http.StatusNotFound,
-			Internal:   err,
-		})
-		return
-	}
-
-	wsUpgrader := newUpgrader(app)
+	wsUpgrader := websocket.Upgrader{}
 	conn, err := wsUpgrader.Upgrade(w, r, nil)
+
 	if err != nil {
-		apperrors.WriteError(w, &apperrors.AppError{
+		apperrors.WriteWsError(conn, &lock, &apperrors.AppError{
+			ID:         uuid.New(),
+			Request:    r,
 			Code:       ERROR_USER_CONNECT_WEBSOCKET_UPGRADE,
 			Message:    "",
 			StatusCode: http.StatusInternalServerError,
@@ -128,6 +67,57 @@ func UserConnect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer conn.Close()
+	appUUID, err := uuid.Parse(r.PathValue("app_id"))
+	if err != nil {
+		apperrors.WriteWsError(conn, &lock, &apperrors.AppError{
+			Code:       ERROR_USER_CONNECT_INVALID_APP_ID,
+			Message:    "",
+			StatusCode: http.StatusBadRequest,
+			Internal:   err,
+			ID:         uuid.New(),
+			Request:    r,
+		})
+		return
+	}
+
+	token := apiguard.GetHeaderApi(r)
+	claims, err := tokenguard.ValidateOneTimeToken(token)
+	if err != nil {
+		apperrors.WriteWsError(conn, &lock, &apperrors.AppError{
+			Code:       ERROR_USER_CONNECT_INVALID_TOKEN,
+			Message:    "",
+			StatusCode: http.StatusUnauthorized,
+			Internal:   err,
+			ID:         uuid.New(),
+			Request:    r,
+		})
+		return
+	}
+
+	if claims.App.ID.String() != appUUID.String() {
+		apperrors.WriteWsError(conn, &lock, &apperrors.AppError{
+			Code:       ERROR_USER_CONNECT_TOKEN_APP_MISMATCH,
+			Message:    "",
+			StatusCode: http.StatusForbidden,
+			Internal:   err,
+			ID:         uuid.New(),
+			Request:    r,
+		})
+		return
+	}
+
+	_, err = services.C(ctx, nil, true).App(appUUID).Get()
+	if err != nil {
+		apperrors.WriteWsError(conn, &lock, &apperrors.AppError{
+			Code:       ERROR_USER_CONNECT_APP_NOT_FOUND,
+			Message:    "",
+			StatusCode: http.StatusForbidden,
+			Internal:   err,
+			ID:         uuid.New(),
+			Request:    r,
+		})
+		return
+	}
 
 	fanoutClient := meridian.Client().Fanout()
 	channelKey := fanoutClient.FormatChannelKey(fanout.ChannelKey{

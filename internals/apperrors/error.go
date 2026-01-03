@@ -1,19 +1,22 @@
 package apperrors
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"sync"
 
 	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
 )
 
 // AppError represents a structured application error
 type AppError struct {
-	ID         uuid.UUID     `json:"id"`
+	ID         uuid.UUID     `json:"error_id"`
 	Code       string        `json:"code"`
 	Message    string        `json:"message"`
 	StatusCode int           `json:"status_code"`
-	Internal   error         `json:"-"` // The underlying error for logging
+	Internal   error         `json:"error"` // The underlying error for logging
 	Request    *http.Request `json:"-"`
 }
 
@@ -29,9 +32,21 @@ func Log(err *AppError) {
 }
 
 // WriteError writes an error response to http.ResponseWriter
-func WriteError(w http.ResponseWriter, err *AppError) {
+func WriteError(w *http.ResponseWriter, err *AppError) {
 	Log(err)
-	http.Error(w, err.Code, err.StatusCode)
+	if w != nil {
+		_ = json.NewEncoder(*w).Encode(err)
+	}
+}
+
+func WriteWsError(c *websocket.Conn, lock *sync.Mutex, err *AppError) {
+	lock.Lock()
+	defer lock.Unlock()
+	c.WriteJSON(err)
+	closeMsg := websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Code)
+	c.WriteMessage(websocket.CloseNormalClosure, closeMsg)
+	c.Close()
+
 }
 
 // =============================================================================

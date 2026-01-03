@@ -11,6 +11,7 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+	set "github.com/hashicorp/go-set"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -28,19 +29,20 @@ type CreateAppReponse struct {
 }
 
 const (
-	ERROR_INVALID_CREATE_APP_BODY    = "ERROR_INVALID_CREATE_APP_BODY"
-	ERROR_FAILED_START_CREATE_APP_TX = "ERROR_FAILED_START_CREATE_APP_TX"
-	ERROR_FAILED_INSERT_APP_DB       = "ERROR_FAILED_INSERT_APP_DB"
-	ERROR_FAILED_GENERATE_API_KEY    = "ERROR_FAILED_GENERATE_API_KEY"
-	ERROR_FAILED_CREATE_API_KEY      = "ERROR_FAILED_CREATE_API_KEY"
+	ERROR_CREATE_APP_INVALID_BODY                 = "ERROR_CREATE_APP_INVALID_BODY"
+	ERROR_CREATE_APP_FAILED_START_TX              = "ERROR_CREATE_APP_FAILED_START_TX"
+	ERROR_CREATE_APP_FAILED_INSERT_APP_DB         = "ERROR_CREATE_APP_FAILED_INSERT_APP_DB"
+	ERROR_CREATE_APP_FAILED_GENERATE_API_KEY      = "ERROR_CREATE_APP_FAILED_GENERATE_API_KEY"
+	ERROR_CREATE_API_KEY_FAILED                   = "ERROR_FAILED_CREATE_API_KEY"
+	ERROR_CREATE_API_KEY_SOME_REGIONS_ARE_INVALID = "ERROR_CREATE_API_KEY_SOME_REGIONS_ARE_INVALID"
 )
 
 func CreateApp(w http.ResponseWriter, r *http.Request) {
 	body := CreateAppStruct{}
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		apperrors.WriteError(w, &apperrors.AppError{
-			Code:       ERROR_INVALID_CREATE_APP_BODY,
+		apperrors.WriteError(&w, &apperrors.AppError{
+			Code:       ERROR_CREATE_APP_INVALID_BODY,
 			Message:    "",
 			StatusCode: http.StatusBadRequest,
 			Internal:   err,
@@ -48,11 +50,25 @@ func CreateApp(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-
+	uniqueRegions := set.From(body.Regions)
+	uniqueRegionsSlice := uniqueRegions.Slice()
+	for _, region := range uniqueRegionsSlice {
+		if !region.Valid() {
+			apperrors.WriteError(&w, &apperrors.AppError{
+				ID:         uuid.New(),
+				Code:       ERROR_CREATE_API_KEY_SOME_REGIONS_ARE_INVALID,
+				Message:    "",
+				StatusCode: http.StatusBadRequest,
+				Internal:   err,
+				Request:    r,
+			})
+			return
+		}
+	}
 	tx, err := postgresPool.NewTx(r.Context(), pgx.TxOptions{})
 	if err != nil {
-		apperrors.WriteError(w, &apperrors.AppError{
-			Code:       ERROR_FAILED_START_CREATE_APP_TX,
+		apperrors.WriteError(&w, &apperrors.AppError{
+			Code:       ERROR_CREATE_APP_FAILED_START_TX,
 			Message:    "",
 			StatusCode: http.StatusInternalServerError,
 			Internal:   err,
@@ -71,8 +87,8 @@ func CreateApp(w http.ResponseWriter, r *http.Request) {
 		AllowedOrigins: body.AllowedOrigins,
 	})
 	if err != nil {
-		apperrors.WriteError(w, &apperrors.AppError{
-			Code:       ERROR_FAILED_INSERT_APP_DB,
+		apperrors.WriteError(&w, &apperrors.AppError{
+			Code:       ERROR_CREATE_APP_FAILED_INSERT_APP_DB,
 			Message:    "",
 			StatusCode: http.StatusInternalServerError,
 			Internal:   err,
@@ -84,8 +100,8 @@ func CreateApp(w http.ResponseWriter, r *http.Request) {
 
 	key, err := apiguard.RandomSecretKey()
 	if err != nil {
-		apperrors.WriteError(w, &apperrors.AppError{
-			Code:       ERROR_FAILED_GENERATE_API_KEY,
+		apperrors.WriteError(&w, &apperrors.AppError{
+			Code:       ERROR_CREATE_APP_FAILED_GENERATE_API_KEY,
 			Message:    "",
 			StatusCode: http.StatusInternalServerError,
 			Internal:   err,
@@ -106,8 +122,8 @@ func CreateApp(w http.ResponseWriter, r *http.Request) {
 		},
 	})
 	if err != nil {
-		apperrors.WriteError(w, &apperrors.AppError{
-			Code:       ERROR_FAILED_CREATE_API_KEY,
+		apperrors.WriteError(&w, &apperrors.AppError{
+			Code:       ERROR_CREATE_API_KEY_SOME_REGIONS_ARE_INVALID,
 			Message:    "",
 			StatusCode: http.StatusInternalServerError,
 			Internal:   err,
@@ -123,7 +139,7 @@ func CreateApp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := tx.Commit(r.Context()); err != nil {
-		apperrors.WriteError(w, &apperrors.AppError{
+		apperrors.WriteError(&w, &apperrors.AppError{
 			Code:       "ERROR_FAILED_COMMIT_TX",
 			Message:    "",
 			StatusCode: http.StatusInternalServerError,
