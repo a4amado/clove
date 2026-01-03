@@ -2,6 +2,7 @@ package AppHandlersV1
 
 import (
 	AppKeysHandlersV1 "clove/internals/handlers/api/v1/app/keys"
+	AppRegionsHandlersV1 "clove/internals/handlers/api/v1/app/regions"
 	AppTokensHandlersV1 "clove/internals/handlers/api/v1/app/tokens"
 
 	"github.com/go-chi/chi/v5"
@@ -18,5 +19,6 @@ func Routes() chi.Router {
 
 	router.Mount("/{app_id}/keys/", AppKeysHandlersV1.Routes())
 	router.Mount("/{app_id}/tokens/", AppTokensHandlersV1.Routes())
+	router.Mount("/{app_id}/regions/", AppRegionsHandlersV1.Routes())
 	return router
 }

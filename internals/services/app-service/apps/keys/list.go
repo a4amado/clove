@@ -7,18 +7,28 @@ import (
 )
 
 func (as *KeysCtx) List(page int32) ([]repository.AppApiKey, error) {
-	queries := as.App.Queries
-	if as.App.Tx != nil {
-		queries = queries.WithTx(*as.App.Tx)
+	queries := as.BaseCtx.Queries
+	if as.BaseCtx.Tx != nil {
+		queries = queries.WithTx(*as.BaseCtx.Tx)
 	}
 	if page <= 0 {
-		page = 1
+		page = 0
+	} else {
+		page = page - 1
 	}
-	return queries.ListAppApiKeys(as.App.ReqCtx, repository.ListAppApiKeysParams{
+	keys, err := queries.App_Key_List(as.BaseCtx.ReqCtx, repository.App_Key_ListParams{
 		AppID: pgtype.UUID{
-			Bytes: as.AppId,
+			Bytes: as.AppID,
 			Valid: true,
 		},
 		PageIdx: page,
 	})
+
+	if err != nil {
+		return nil, err
+	}
+	if len(keys) == 0 {
+		return []repository.AppApiKey{}, nil
+	}
+	return keys, nil
 }

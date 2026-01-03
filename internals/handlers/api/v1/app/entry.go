@@ -1,68 +1,168 @@
 package AppHandlersV1
 
 import (
+	"clove/internals/apiguard"
+	"clove/internals/apperrors"
 	"clove/internals/meridian"
 	MessageReplication "clove/internals/meridian/replication/message-replication"
-	"encoding/json"
+	"clove/internals/services"
+	"errors"
+	"io"
 	"net/http"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
-type MessageEntryBody struct {
-	ChannelID string `json:"channel_id"`
-	Payload   string `json:"payload"`
-}
+const (
+	ERROR_MESSAGE_ENTRY_INVALID_APP_ID       = "ERROR_MESSAGE_ENTRY_INVALID_APP_ID"
+	ERROR_MESSAGE_ENTRY_INVALID_APP_KEY_ID   = "ERROR_MESSAGE_ENTRY_INVALID_APP_KEY_ID"
+	ERROR_MESSAGE_ENTRY_MISSING_CHANNEL_ID   = "ERROR_MESSAGE_ENTRY_MISSING_CHANNEL_ID"
+	ERROR_MESSAGE_ENTRY_APP_KEY_NOT_FOUND    = "ERROR_MESSAGE_ENTRY_APP_KEY_NOT_FOUND"
+	ERROR_MESSAGE_ENTRY_FAILED_FETCH_APP_KEY = "ERROR_MESSAGE_ENTRY_FAILED_FETCH_APP_KEY"
+	ERROR_MESSAGE_ENTRY_UNAUTHORIZED_API_KEY = "ERROR_MESSAGE_ENTRY_UNAUTHORIZED_API_KEY"
+	ERROR_MESSAGE_ENTRY_INVALID_REQUEST_BODY = "ERROR_MESSAGE_ENTRY_INVALID_REQUEST_BODY"
+	ERROR_MESSAGE_ENTRY_REPLICATION_FAILED   = "ERROR_MESSAGE_ENTRY_REPLICATION_FAILED"
+	ERROR_MESSAGE_ENTRY_BODY_TOO_LARGE       = "ERROR_MESSAGE_ENTRY_BODY_TOO_LARGE"
+	ERROR_MESSAGE_ENTRY_BAD_BODY             = "ERROR_MESSAGE_ENTRY_BAD_BODY"
+)
 
 func MessageEntry(w http.ResponseWriter, r *http.Request) {
-
-	appIdStr := r.PathValue("app_id")
-
-	appId, err := uuid.Parse(appIdStr)
+	appId, err := uuid.Parse(r.PathValue("app_id"))
 	if err != nil {
-		http.Error(w, "Invalid App ID", http.StatusUnauthorized)
+		apperrors.WriteError(&w, &apperrors.AppError{
+			Code:       ERROR_MESSAGE_ENTRY_INVALID_APP_ID,
+			Message:    "",
+			StatusCode: http.StatusBadRequest,
+			Internal:   err,
+			Request:    r,
+			ID:         uuid.New(),
+		})
 		return
 	}
-	// !: disabled for dev
-	// token := r.Header.Get("Authorization")
-	// splitToken := strings.Split(token, " ")
-	// if len(splitToken) != 2 {
-	// 	http.Error(w, "Invalid Token", http.StatusUnauthorized)
-	// 	return
-	// }
 
-	// claims, err := tokenguard.ValidateOneTimeToken(token)
-	// if err != nil {
-	// 	http.Error(w, "Invalid Token", http.StatusForbidden)
-	// 	return
-	// }
-
-	// // Wrap the body with MaxBytesReader to enforce size limit
-	// r.Body = http.MaxBytesReader(w, r.Body, plans.GetPlanMessageSizeLimit(claims.App.AppType))
-	// defer r.Body.Close()
-	// if err != nil {
-	// 	http.Error(w, "Failed to read body", http.StatusBadRequest)
-	// 	return
-	// }
-	// if plans.DoesMessageSizeExceedsLimit(claims.App.AppType, int64(len(body))) {
-	// 	http.Error(w, "Message size exceeds limit", http.StatusRequestEntityTooLarge)
-	// 	return
-	// }
-
-	body := MessageEntryBody{}
-	err = json.NewDecoder(r.Body).Decode(&body)
+	app_key_id, err := uuid.Parse(r.URL.Query().Get("app_key_id"))
 	if err != nil {
-		http.Error(w, "Bad ssssssssss", http.StatusBadRequest)
+		apperrors.WriteError(&w, &apperrors.AppError{
+			Code:       ERROR_MESSAGE_ENTRY_INVALID_APP_KEY_ID,
+			Message:    "",
+			StatusCode: http.StatusBadRequest,
+			Internal:   err,
+			ID:         uuid.New(),
+			Request:    r,
+		})
+		return
+	}
+
+	channel_id := r.URL.Query().Get("channel_id")
+	if channel_id == "" {
+		apperrors.WriteError(&w, &apperrors.AppError{
+			Code:       ERROR_MESSAGE_ENTRY_MISSING_CHANNEL_ID,
+			Message:    "",
+			StatusCode: http.StatusBadRequest,
+			Internal:   err,
+			ID:         uuid.New(),
+			Request:    r,
+		})
+		return
+	}
+
+	apiHeadersKey := apiguard.GetHeaderApi(r)
+
+	r.Body = http.MaxBytesReader(w, r.Body, 50*1024)
+	defer r.Body.Close()
+
+	appSrvs := services.C(r.Context(), nil, true)
+	Apikey, err := appSrvs.App(appId).Key(app_key_id).Get()
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			apperrors.WriteError(&w, &apperrors.AppError{
+				Code:       ERROR_MESSAGE_ENTRY_APP_KEY_NOT_FOUND,
+				Message:    "",
+				StatusCode: http.StatusNotFound,
+				Internal:   err,
+				ID:         uuid.New(),
+				Request:    r,
+			})
+			return
+		}
+		apperrors.WriteError(&w, &apperrors.AppError{
+			Code:       ERROR_MESSAGE_ENTRY_FAILED_FETCH_APP_KEY,
+			Message:    "",
+			StatusCode: http.StatusInternalServerError,
+			Internal:   err,
+		})
+		return
+	}
+
+	if Apikey.String != apiHeadersKey {
+		apperrors.WriteError(&w, &apperrors.AppError{
+			Code:       ERROR_MESSAGE_ENTRY_UNAUTHORIZED_API_KEY,
+			Message:    "",
+			StatusCode: http.StatusUnauthorized,
+			Internal:   err,
+			ID:         uuid.New(),
+			Request:    r,
+		})
+		return
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		var maxBytesErr *http.MaxBytesError
+
+		if errors.As(err, &maxBytesErr) {
+			apperrors.WriteError(&w, &apperrors.AppError{
+				Code:       ERROR_MESSAGE_ENTRY_BODY_TOO_LARGE,
+				Message:    "",
+				StatusCode: http.StatusBadRequest,
+				Internal:   err,
+				ID:         uuid.New(),
+				Request:    r,
+			})
+		} else {
+
+			apperrors.WriteError(&w, &apperrors.AppError{
+				Code:       ERROR_MESSAGE_ENTRY_BAD_BODY,
+				Message:    "",
+				StatusCode: http.StatusBadRequest,
+				Internal:   err,
+				ID:         uuid.New(),
+				Request:    r,
+			})
+		}
+
+		return
+	}
+
+	if len(body) > 32*1024 {
+
+		apperrors.WriteError(&w, &apperrors.AppError{
+			Code:       ERROR_MESSAGE_ENTRY_BODY_TOO_LARGE,
+			Message:    "",
+			StatusCode: http.StatusBadRequest,
+			Internal:   err,
+			ID:         uuid.New(),
+			Request:    r,
+		})
 		return
 	}
 	errList := meridian.Client().ReplicateMessage().PublishInternalReplicatableDeliveryMsgToLocalRabbitMQ(r.Context(), MessageReplication.InternalReplicatableDeliveryMsg{
-		ChannelID: body.ChannelID,
+		ChannelID: channel_id,
 		AppID:     appId,
-		Payload:   []byte(body.Payload),
+		Payload:   body,
 	})
 	if errList != nil {
-		http.Error(w, "Failed to replicate"+errList.Error(), http.StatusInternalServerError)
+		apperrors.WriteError(&w, &apperrors.AppError{
+			Code:       ERROR_MESSAGE_ENTRY_REPLICATION_FAILED,
+			Message:    "",
+			StatusCode: http.StatusInternalServerError,
+			Internal:   errList,
+			ID:         uuid.New(),
+			Request:    r,
+		})
 		return
 	}
+
 	w.WriteHeader(http.StatusAccepted)
 }

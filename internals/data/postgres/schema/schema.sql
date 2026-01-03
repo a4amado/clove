@@ -38,6 +38,7 @@ CREATE TABLE "app_api_key" (
     "createdAt" TIMESTAMP DEFAULT NOW(),
     "updatedAt" TIMESTAMP DEFAULT NOW(),
     "key" TEXT,
+    "name" VARCHAR(50),
     CONSTRAINT "api_key_app_fk" FOREIGN KEY ("appId") REFERENCES "app"("id")
 );
 create INDEX "app_api_key_appId_idx"  on "app_api_key"("appId")

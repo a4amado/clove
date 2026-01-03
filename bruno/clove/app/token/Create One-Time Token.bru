@@ -5,15 +5,25 @@ meta {
 }
 
 post {
-  url: http://localhost:8080/api/v1/apps/7eec1afc-3201-4808-b5c0-16c72f100153/tokens/
+  url: http://localhost:8080/api/v1/apps/{{app_id}}/tokens/
   body: json
-  auth: inherit
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{api_key}}
 }
 
 body:json {
   {
-    "channel_id": "ssssssssssss"
+    "api_key_id": "{{key_id}}",
+    "channel_id": "{{channel_id}}"
   }
+}
+
+vars:pre-request {
+  app_key_id: 
+  api_key: sk-5O9ftL3Da11jun0ZWKICcFDz_rKtuNlsEtFE5CbOjCw1p1_OXNTlIuhzodcARR9QNulF7Yh7YokkviaOysfwNg
 }
 
 settings {

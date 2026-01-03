@@ -10,6 +10,6 @@ func Routes() chi.Router {
 	router := chi.NewRouter()
 	router.Get("/", ListAppApiKeys)
 	router.Post("/", CreateAppApiKey)
-	router.Delete("/{api_token_id}/", DeleteAppApiKey)
+	router.Delete("/{key_id}/", DeleteAppApiKey)
 	return router
 }

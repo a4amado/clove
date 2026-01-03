@@ -3,24 +3,26 @@ package tokenguard
 import (
 	envConsts "clove/internals/consts/env"
 	repository "clove/internals/services/generatedRepo"
+	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 type OneTimeTokenClaim struct {
-	App       repository.App
-	ChannelID string `json:"channel_id"`
+	App       repository.App `json:"app"`
+	ChannelID string         `json:"channel_id"`
 	jwt.RegisteredClaims
 }
 
-func GenerateOneTimeToken(app repository.App, channelID string) (string, error) {
+func GenerateOneTimeToken(app repository.App, channelID string, keyId uuid.UUID) (string, error) {
 	claims := OneTimeTokenClaim{
 		App:       app,
 		ChannelID: channelID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   "Clove One-Time Token",
-			Issuer:    string(envConsts.Region()),
+			Issuer:    fmt.Sprintf("%v:%s", envConsts.Region(), keyId.String()),
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute)),
 			NotBefore: jwt.NewNumericDate(time.Now()),
 		},

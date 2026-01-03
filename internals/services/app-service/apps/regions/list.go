@@ -6,20 +6,18 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-func (as *RegionCtx) List() (*[]repository.AppApiKey, error) {
-	queries := as.App.Queries
-	if as.App.Tx != nil {
-		queries = queries.WithTx(*as.App.Tx)
+func (as *RegionsCtx) List() (*[]repository.Region, error) {
+	queries := as.BaseCtx.Queries
+	if as.BaseCtx.Tx != nil {
+		queries = queries.WithTx(*as.BaseCtx.Tx)
 	}
 
-	if as.App.Cache {
+	if as.BaseCtx.Cache {
 		// log in the cache
 	}
-	region, err := queries.ListAppApiKeys(as.App.ReqCtx, repository.ListAppApiKeysParams{
-		AppID: pgtype.UUID{
-			Bytes: as.AppId,
-			Valid: true,
-		},
+	region, err := queries.App_Region_Select(as.BaseCtx.ReqCtx, pgtype.UUID{
+		Bytes: as.AppId,
+		Valid: true,
 	})
 	if err != nil {
 		return nil, err

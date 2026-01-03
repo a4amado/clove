@@ -1,17 +1,27 @@
 package appservice
 
-import repository "clove/internals/services/generatedRepo"
+import (
+	repository "clove/internals/services/generatedRepo"
 
-func (as *RegionsCtx) Update(arg repository.UpdateAppRegionsParams) error {
-	queries := as.App.Queries
-	if as.App.Tx != nil {
-		queries = queries.WithTx(*as.App.Tx)
+	"github.com/jackc/pgx/v5/pgtype"
+)
+
+func (as *RegionsCtx) Update(region []repository.Region) error {
+	queries := as.BaseCtx.Queries
+	if as.BaseCtx.Tx != nil {
+		queries = queries.WithTx(*as.BaseCtx.Tx)
 	}
 
-	if as.App.Cache {
+	if as.BaseCtx.Cache {
 		// log in the cache
 	}
 
-	return queries.UpdateAppRegions(as.App.ReqCtx, arg)
+	return queries.App_Region_Update(as.BaseCtx.ReqCtx, repository.App_Region_UpdateParams{
+		ID: pgtype.UUID{
+			Bytes: as.AppId,
+			Valid: true,
+		},
+		Region: region,
+	})
 
 }

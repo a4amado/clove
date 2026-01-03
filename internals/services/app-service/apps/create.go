@@ -13,17 +13,17 @@ type CreateAppResponse struct {
 	Key repository.AppApiKey `json:"key"`
 }
 
-func (as *AppsServiceCtx) Create(arg repository.InsertAppParams) (*CreateAppResponse, error) {
-	queries := as.App.Queries
-	if as.App.Tx != nil {
-		queries = queries.WithTx(*as.App.Tx)
+func (as *AppsCtx) Create(arg repository.App_InsertParams) (*CreateAppResponse, error) {
+	queries := as.BaseCtx.Queries
+	if as.BaseCtx.Tx != nil {
+		queries = queries.WithTx(*as.BaseCtx.Tx)
 	}
-	app, err := queries.InsertApp(as.App.ReqCtx, arg)
+	app, err := queries.App_Insert(as.BaseCtx.ReqCtx, arg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert app: %w", err)
 	}
 
-	key, err := queries.CreateAppApiKey(as.App.ReqCtx, repository.CreateAppApiKeyParams{
+	key, err := queries.App_Key_Insert(as.BaseCtx.ReqCtx, repository.App_Key_InsertParams{
 		AppID: app.ID,
 		Key: pgtype.Text{
 			String: uuid.NewString(),
