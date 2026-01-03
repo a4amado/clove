@@ -1,4 +1,4 @@
--- name: ListAppApiKeys :many
+-- name: App_Key_List :many
 SELECT * from "app_api_key"
 WHERE   "appId" = @app_id
 Limit 20

@@ -14,7 +14,7 @@ func (a *KeyCtx) Delete() (int64, error) {
 	}
 	go cache.Apps().Keys().Delete(a.BaseCtx.ReqCtx, a.AppId, a.KeyId)
 
-	return q.DeleteApiKey(a.BaseCtx.ReqCtx, repository.DeleteApiKeyParams{
+	return q.App_Key_Delete(a.BaseCtx.ReqCtx, repository.App_Key_DeleteParams{
 		ID: pgtype.UUID{
 			Bytes: a.KeyId,
 			Valid: true,

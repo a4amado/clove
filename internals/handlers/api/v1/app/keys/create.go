@@ -5,13 +5,11 @@ import (
 	"clove/internals/apperrors"
 	postgresPool "clove/internals/data/postgres/pool"
 	"clove/internals/services"
-	repository "clove/internals/services/generatedRepo"
 	"encoding/json"
 	"net/http"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type create_app_key_error string
@@ -85,17 +83,7 @@ func CreateAppApiKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	api, err := services.C(r.Context(), &tx, true).App(apId).Keys().Create(repository.CreateAppApiKeyParams{
-		AppID: pgtype.UUID{Bytes: apId, Valid: true},
-		Key: pgtype.Text{
-			String: randomKey,
-			Valid:  true,
-		},
-		Name: pgtype.Text{
-			String: body.Name,
-			Valid:  true,
-		},
-	})
+	api, err := services.C(r.Context(), &tx, true).App(apId).Keys().Create(body.Name, randomKey)
 	if err != nil {
 		apperrors.WriteError(&w, &apperrors.AppError{
 			Code:       ERROR_CREATE_APP_API_KEY_FAILED_CREATE,

@@ -16,12 +16,12 @@ func (as *RegionsCtx) Update(region []repository.Region) error {
 		// log in the cache
 	}
 
-	return queries.UpdateAppRegions(as.BaseCtx.ReqCtx, repository.UpdateAppRegionsParams{
-		Regions: region,
-		AppID: pgtype.UUID{
+	return queries.App_Region_Update(as.BaseCtx.ReqCtx, repository.App_Region_UpdateParams{
+		ID: pgtype.UUID{
 			Bytes: as.AppId,
 			Valid: true,
 		},
+		Region: region,
 	})
 
 }

@@ -15,7 +15,7 @@ func (as *RegionsCtx) List() (*[]repository.Region, error) {
 	if as.BaseCtx.Cache {
 		// log in the cache
 	}
-	region, err := queries.ListAppRegions(as.BaseCtx.ReqCtx, pgtype.UUID{
+	region, err := queries.App_Region_Select(as.BaseCtx.ReqCtx, pgtype.UUID{
 		Bytes: as.AppId,
 		Valid: true,
 	})

@@ -1,5 +1,4 @@
- 
--- name: InsertApp :one
+-- name: App_Insert :one
 INSERT INTO "app"
 ("appSlug", "region", "appType", "userId", "allowedOrigins")
 values

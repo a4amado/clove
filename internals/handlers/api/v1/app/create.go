@@ -79,7 +79,7 @@ func CreateApp(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback(r.Context()) // Always rollback on early return
 
-	app, err := services.C(r.Context(), &tx, true).Apps().Create(repository.InsertAppParams{
+	app, err := services.C(r.Context(), &tx, true).Apps().Create(repository.App_InsertParams{
 		AppSlug:        fmt.Sprintf("%s:%s", uuid.NewString(), body.AppSlug),
 		Regions:        body.Regions,
 		AppType:        repository.AppTypePro,
@@ -111,16 +111,7 @@ func CreateApp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	appApiKey, err := services.C(r.Context(), &tx, true).App(app.App.ID.Bytes).Keys().Create(repository.CreateAppApiKeyParams{
-		AppID: app.App.ID,
-		Key: pgtype.Text{
-			String: key,
-			Valid:  true,
-		},
-		Name: pgtype.Text{
-			String: "Clove: Initial Auto Generated Key",
-		},
-	})
+	appApiKey, err := services.C(r.Context(), &tx, true).App(app.App.ID.Bytes).Keys().Create("Clove: Initial Auto Generated Key", key)
 	if err != nil {
 		apperrors.WriteError(&w, &apperrors.AppError{
 			Code:       ERROR_CREATE_API_KEY_SOME_REGIONS_ARE_INVALID,

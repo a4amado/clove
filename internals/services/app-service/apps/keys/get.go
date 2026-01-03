@@ -23,7 +23,7 @@ func (a *KeyCtx) Get() (*pgtype.Text, error) {
 				Valid:  true,
 			}, nil
 		}
-		key, err := q.GetAppApiKey(a.BaseCtx.ReqCtx, repository.GetAppApiKeyParams{
+		key, err := q.App_Key_Select(a.BaseCtx.ReqCtx, repository.App_Key_SelectParams{
 			KeyID: pgtype.UUID{
 				Bytes: a.KeyId,
 				Valid: true,
@@ -36,7 +36,7 @@ func (a *KeyCtx) Get() (*pgtype.Text, error) {
 		if err != nil {
 			return nil, err
 		}
-		go func(args repository.GetAppApiKeyParams, key pgtype.Text) {
+		go func(args repository.App_Key_SelectParams, key pgtype.Text) {
 			ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(500*time.Millisecond))
 			defer cancel()
 			err := cache.Apps().Keys().Set(ctx, args.AppID.Bytes, args.KeyID.Bytes, key.String)
@@ -44,7 +44,7 @@ func (a *KeyCtx) Get() (*pgtype.Text, error) {
 
 				return
 			}
-		}(repository.GetAppApiKeyParams{
+		}(repository.App_Key_SelectParams{
 			KeyID: pgtype.UUID{
 				Bytes: a.KeyId,
 				Valid: true,
@@ -53,13 +53,13 @@ func (a *KeyCtx) Get() (*pgtype.Text, error) {
 				Bytes: a.AppId,
 				Valid: true,
 			},
-		}, key)
+		}, key.Key)
 		return &pgtype.Text{
-			String: key.String,
+			String: key.Key.String,
 			Valid:  true,
 		}, nil
 	}
-	key, err := q.GetAppApiKey(a.BaseCtx.ReqCtx, repository.GetAppApiKeyParams{
+	key, err := q.App_Key_Select(a.BaseCtx.ReqCtx, repository.App_Key_SelectParams{
 		KeyID: pgtype.UUID{
 			Bytes: a.KeyId,
 			Valid: true,
@@ -72,7 +72,7 @@ func (a *KeyCtx) Get() (*pgtype.Text, error) {
 	if err != nil {
 		return nil, err
 	}
-	go func(args repository.GetAppApiKeyParams, key pgtype.Text) {
+	go func(args repository.App_Key_SelectParams, key pgtype.Text) {
 		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(500*time.Millisecond))
 		defer cancel()
 		err := cache.Apps().Keys().Set(ctx, args.AppID.Bytes, args.KeyID.Bytes, key.String)
@@ -81,7 +81,7 @@ func (a *KeyCtx) Get() (*pgtype.Text, error) {
 			return
 		}
 	}(repository.
-		GetAppApiKeyParams{
+		App_Key_SelectParams{
 		KeyID: pgtype.UUID{
 			Bytes: a.KeyId,
 			Valid: true,
@@ -90,9 +90,9 @@ func (a *KeyCtx) Get() (*pgtype.Text, error) {
 			Bytes: a.AppId,
 			Valid: true,
 		},
-	}, key)
+	}, key.Key)
 	return &pgtype.Text{
-		String: key.String,
+		String: key.Key.String,
 		Valid:  true,
 	}, nil
 }

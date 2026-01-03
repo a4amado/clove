@@ -16,7 +16,7 @@ func (as *KeysCtx) List(page int32) ([]repository.AppApiKey, error) {
 	} else {
 		page = page - 1
 	}
-	keys, err := queries.ListAppApiKeys(as.BaseCtx.ReqCtx, repository.ListAppApiKeysParams{
+	keys, err := queries.App_Key_List(as.BaseCtx.ReqCtx, repository.App_Key_ListParams{
 		AppID: pgtype.UUID{
 			Bytes: as.AppID,
 			Valid: true,

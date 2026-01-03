@@ -19,7 +19,7 @@ func (as AppCtx) Get() (*repository.App, error) {
 			return app, nil
 		}
 	}
-	app, err := queries.FindAppById(as.BaseCtx.ReqCtx, pgtype.UUID{
+	app, err := queries.App_Select(as.BaseCtx.ReqCtx, pgtype.UUID{
 		Bytes: as.AppID,
 		Valid: true,
 	})

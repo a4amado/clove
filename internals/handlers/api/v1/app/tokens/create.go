@@ -8,6 +8,7 @@ import (
 	"clove/internals/tokenguard"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -79,6 +80,9 @@ func CreateAppOneTimeToken(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	fmt.Println("appId: ", appId)
+	fmt.Println("body.ApiKeyId: ", body.ApiKeyId)
+	fmt.Println("apiguard.GetHeaderApi(r): ", apiguard.GetHeaderApi(r))
 	key, err := services.C(r.Context(), nil, true).App(appId).Key(body.ApiKeyId).Get()
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

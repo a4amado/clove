@@ -6,7 +6,7 @@ meta {
 
 post {
   url: http://localhost:8080/api/v1/apps/{{app_id}}/entry/?app_key_id={{key_id}}&channel_id=1
-  body: file
+  body: json
   auth: bearer
 }
 
@@ -16,7 +16,7 @@ params:query {
 }
 
 auth:bearer {
-  token: sk-ja_KETIBX0FuPtFVOqENAH4izE8IMJvyrM_cucWVYJ1QSbmiZnF3SydbIixaQ2x-L_TnRV4XEjG39mFyxyPkfg
+  token: sk-5O9ftL3Da11jun0ZWKICcFDz_rKtuNlsEtFE5CbOjCw1p1_OXNTlIuhzodcARR9QNulF7Yh7YokkviaOysfwNg
 }
 
 body:json {
@@ -29,10 +29,6 @@ body:json {
 
 body:text {
   sssssssssssssssssssssssssssssssssssss
-}
-
-body:file {
-  file: @file(D:\مصوفات ايتام.xlsx) @contentType(application/vnd.openxmlformats-officedocument.spreadsheetml.sheet)
 }
 
 settings {

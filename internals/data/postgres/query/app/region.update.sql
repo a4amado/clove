@@ -1,4 +1,4 @@
--- name: AddRegionToApp :one
+-- name: App_Region_Update :exec
 UPDATE "app"
 SET "region" = @region
 WHERE "id" = @id
