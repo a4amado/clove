@@ -63,16 +63,16 @@ func mustGetFloat(key string) float64 {
 }
 
 // Public getters
-func RedisStoreURL() string {
-	return mustGetString("REDIS_STORE_URL")
+func ValkeyStoreURL() string {
+	return mustGetString("VALKEY_STORE_URL")
 }
 
-func RedisFanoutURL() string {
-	return mustGetString("REDIS_FANOUT_URL")
+func ValkeyFanoutURL() string {
+	return mustGetString("VALKEY_FANOUT_URL")
 }
 
-func RedisHeartbeatURL() string {
-	return mustGetString("REDIS_HEARTBEAT_URL")
+func ValkeyHeartbeatURL() string {
+	return mustGetString("VALKEY_HEARTBEAT_URL")
 }
 
 func PostgresDatabaseURL() string {

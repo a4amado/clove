@@ -32,7 +32,7 @@ func Client(pool ValkeyDB) valkey.Client {
 	wg.Go(func() {
 		godotenv.Load()
 		valkeyStoreConnOnce.Do(func() {
-			opts, err := valkey.ParseURL(envConsts.RedisStoreURL())
+			opts, err := valkey.ParseURL(envConsts.ValkeyStoreURL())
 			if err != nil {
 				panic(err)
 			}
@@ -46,7 +46,7 @@ func Client(pool ValkeyDB) valkey.Client {
 	wg.Go(func() {
 
 		valkeyFanoutConnOnce.Do(func() {
-			opts, err := valkey.ParseURL(envConsts.RedisFanoutURL())
+			opts, err := valkey.ParseURL(envConsts.ValkeyFanoutURL())
 			if err != nil {
 				panic(err)
 			}
@@ -59,7 +59,7 @@ func Client(pool ValkeyDB) valkey.Client {
 	wg.Go(func() {
 
 		valkeyHeartbeatConnOnce.Do(func() {
-			opts, err := valkey.ParseURL(envConsts.RedisHeartbeatURL())
+			opts, err := valkey.ParseURL(envConsts.ValkeyHeartbeatURL())
 			if err != nil {
 				panic(err)
 			}
