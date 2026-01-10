@@ -1,0 +1,21 @@
+{
+    "version": "2",
+    "sql": [
+        {
+            "engine": "postgresql",
+            "queries": "internals/data/postgres/query/**",
+            "schema": "internals/data/postgres/schema/**",
+            "gen": {
+                "go": {
+                    "package": "repository",
+                    "out": "internals/services/generatedRepo",
+                    "sql_package": "pgx/v5",
+                    "emit_json_tags": true,
+                    "json_tags_case_style": "snake",
+                    "emit_enum_valid_method": true,
+                    "emit_all_enum_values": true
+                }
+            }
+        }
+    ]
+}

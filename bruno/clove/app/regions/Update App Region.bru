@@ -1,0 +1,24 @@
+meta {
+  name: Update App Region
+  type: http
+  seq: 2
+}
+
+post {
+  url: http://localhost:8080/api/v1/apps/{{app_id}}/regions/
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "regions": [
+      "dk1"
+    ]
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

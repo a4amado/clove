@@ -1,0 +1,23 @@
+meta {
+  name: consume
+  type: ws
+  seq: 1
+}
+
+ws {
+  url: localhost:8080/api/v1/apps/{{app_id}}/ws/
+  body: ws
+  auth: bearer
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHAiOnsiaWQiOiI5Yzg5ZTFiNi02MWI5LTQwOGUtOGJjZC03ZTdkZjhhMjBlOTAiLCJhcHBfc2x1ZyI6ImIyZmFhMjhmLWZmMzAtNDQ1YS05ZmM5LWM4OTM4ZmRlODE3NTpzYXNkYXNhYWRhc2QiLCJyZWdpb24iOlsiZGsxIl0sImFwcF90eXBlIjoicHJvIiwidXNlcl9pZCI6IjgyZDg4ZTdjLTY3YTQtNDhhMy1hOTBkLTIwYThkMzRjYjMwMyIsImFsbG93ZWRfb3JpZ2lucyI6WyJzc3Nzc3Nzc3Nzc3Nzc3Nzc3MiXX0sImNoYW5uZWxfaWQiOiIxIiwiaXNzIjoiZGsxOmY0Yjk5NDVkLTcxYTktNDNhMS05MDViLWM2NTYxMzkxYWUyMiIsInN1YiI6IkNsb3ZlIE9uZS1UaW1lIFRva2VuIiwiZXhwIjoxNzY3NDI0MzYzLCJuYmYiOjE3Njc0MjQzMDN9.K7B0tyPs1UkuLPaimw2eAloDvnyHkyY9DuIndxHc5js
+}
+
+body:ws {
+  name: message 1
+  type: json
+  content: '''
+    {}
+  '''
+}

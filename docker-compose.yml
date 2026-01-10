@@ -1,0 +1,141 @@
+services:
+  clove:  # Fixed typo from 'colve'
+    build: 
+      context: ./
+      dockerfile: Dockerfile
+    container_name: clove
+    depends_on:
+      - db
+      - mongo
+      - valkey
+      - rabbitmq
+    networks:
+      - main_network
+    ports:
+      - "8080:8080"  # You need to expose your app port
+    restart: unless-stopped
+    environment:
+      # Environment
+      - ENV=PROD
+      # PostgreSQL - Use service name, not localhost
+      - POSTGRES_DATABASE_URL=postgresql://postgres:example@db:5432/clove?sslmode=disable
+      # MongoDB - Use service name with credentials
+      - MONGO_HISTORY_DATABASE_URL=mongodb://root:example@mongo:27017
+      - MONGO_HISTORY_DATABASE_NAME=clove-history
+      - MONGO_HISTORY_DATABASE_USR_COLLECTION_NAME=user-history
+      - MONGO_HISTORY_DATABASE_APP_COLLECTION_NAME=app-history
+      # Valkey - Use service name and container password (Redis-compatible protocol)
+      - REDIS_STORE_URL=redis://:mypassword@valkey:6379/0
+      - REDIS_FANOUT_URL=redis://:mypassword@valkey:6379/1
+      - REDIS_HEARTBEAT_URL=redis://:mypassword@valkey:6379/3
+      # Geo-Region
+      - REGION=dk1
+      # RabbitMQ - Use service name
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - RABBITMQ_READER_BUFFER_SIZE=1000
+      - RABBITMQ_PREFETCH_COUNT=100
+      - RABBITMQ_NUM_READERS=5
+      # Mailjet
+      - MAILJET_API_KEY=3eb4240fd3a39737a465193758b8a60f
+      - MAILJET_API_SECRETS=0735fbb5b4be3c84d00775b88e13e56b
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq
+    networks:
+      - main_network
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  valkey:
+    image: valkey/valkey:latest
+    container_name: valkey
+    networks:
+      - main_network
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    command: valkey-server --requirepass mypassword --appendonly yes
+    volumes:
+      - valkey_data:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "-a", "mypassword", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  mongo:
+    image: mongo:7.0  # Pin version for prod
+    container_name: mongo
+    networks:
+      - main_network
+    ports:
+      - "27017:27017"
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+      MONGO_INITDB_DATABASE: clove-history
+    volumes:
+      - mongo_data:/data/db
+      - mongo_config:/data/configdb
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  db:
+    image: postgres:16-alpine  # Pin version, use alpine for smaller size
+    container_name: postgres
+    networks:
+      - main_network
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    shm_size: 128mb
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: example
+      POSTGRES_DB: clove
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  valkey_data:
+    driver: local
+  mongo_data:
+    driver: local
+  mongo_config:
+    driver: local
+  postgres_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
+
+networks:
+  main_network:
+    driver: bridge

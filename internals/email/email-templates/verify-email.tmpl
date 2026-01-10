@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Verify Your Email Address</title>
+</head>
+
+<body
+    style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+        style="background-color: #f4f4f4;">
+        <tr>
+            <td style="padding: 40px 20px;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600"
+                    style="margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+
+                    <!-- Header -->
+                    <tr>
+                        <td style="padding: 40px 40px 30px 40px; text-align: center; border-bottom: 1px solid #e5e7eb;">
+                            <h1 style="margin: 0; font-size: 24px; font-weight: 600; color: #111827;">Verify Your Email
+                                Address</h1>
+                        </td>
+                    </tr>
+
+                    <!-- Body Content -->
+                    <tr>
+                        <td style="padding: 40px 40px 30px 40px;">
+                            <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #374151;">
+                                Hi there,
+                            </p>
+                            <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #374151;">
+                                Thanks for signing up! To complete your registration and activate your account, please
+                                verify your email address by clicking the button below.
+                            </p>
+
+                            <!-- CTA Button -->
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0"
+                                style="margin: 30px 0;">
+                                <tr>
+                                    <td style="border-radius: 6px; background-color: #2563eb;">
+                                        <a href="{{.verification_url}}" target="_blank"
+                                            style="display: inline-block; padding: 16px 40px; font-size: 16px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 6px;">
+                                            Verify Email Address
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <p style="margin: 30px 0 20px 0; font-size: 14px; line-height: 20px; color: #6b7280;">
+                                Or copy and paste this link into your browser:
+                            </p>
+                            <p
+                                style="margin: 0 0 20px 0; font-size: 14px; line-height: 20px; color: #2563eb; word-break: break-all;">
+                                {{.verification_url}}
+                            </p>
+
+                            <p style="margin: 30px 0 0 0; font-size: 14px; line-height: 20px; color: #6b7280;">
+                                This link will expire in 24 hours for security reasons.
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Divider -->
+                    <tr>
+                        <td style="padding: 0 40px;">
+                            <div style="border-top: 1px solid #e5e7eb;"></div>
+                        </td>
+                    </tr>
+
+                    <!-- Footer Note -->
+                    <tr>
+                        <td style="padding: 30px 40px 40px 40px;">
+                            <p style="margin: 0 0 10px 0; font-size: 14px; line-height: 20px; color: #6b7280;">
+                                If you didn't create an account with us, you can safely ignore this email.
+                            </p>
+                            <p style="margin: 0; font-size: 14px; line-height: 20px; color: #6b7280;">
+                                Need help? Contact us at <a href="mailto:support@yourcompany.com"
+                                    style="color: #2563eb; text-decoration: none;">support@yourcompany.com</a>
+                            </p>
+                        </td>
+                    </tr>
+
+                </table>
+
+                <!-- Footer -->
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600"
+                    style="margin: 20px auto 0;">
+                    <tr>
+                        <td style="padding: 20px; text-align: center;">
+                            <p style="margin: 0 0 10px 0; font-size: 12px; line-height: 18px; color: #9ca3af;">
+                                © 2025 Your Company Name. All rights reserved.
+                            </p>
+                            <p style="margin: 0; font-size: 12px; line-height: 18px; color: #9ca3af;">
+                                123 Business Street, City, State 12345
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+
+            </td>
+        </tr>
+    </table>
+</body>
+
+</html>
