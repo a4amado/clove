@@ -7,26 +7,26 @@ import (
 )
 
 func (e *Email) Delete() error {
-	return e.Q().UserEmail_Delete(e.CTX(), e.ToPgUUID(e.EmailID))
+	return e.DB.UserEmail_Delete(e.GetCtx(), e.ToPgUUID(e.EmailID))
 }
 
 func (e *Emails) List() (*[]repository.UserEmail, error) {
-	email, err := e.Q().UserEmails_List_ByUserID(e.CTX(), e.ToPgUUID(e.UserID))
+	email, err := e.DB.UserEmails_List_ByUserID(e.GetCtx(), e.ToPgUUID(e.UserID))
 	if err != nil {
 		return nil, err
 	}
 	return &email, nil
 }
 func (e *Email) GetById() (repository.UserEmail, error) {
-	return e.Q().UserEmail_Select(e.CTX(), e.ToPgUUID(e.EmailID))
+	return e.DB.UserEmail_Select(e.GetCtx(), e.ToPgUUID(e.EmailID))
 }
 
 func (e *Emails) GetByEmail(email string) (repository.UserEmail, error) {
-	return e.Q().UserEmail_SelectByEmail(e.CTX(), email)
+	return e.DB.UserEmail_SelectByEmail(e.GetCtx(), email)
 }
 
 func (e *Email) Verify() error {
-	return e.Q().UserEmails_Verify(e.CTX(), pgtype.UUID{
+	return e.DB.UserEmails_Verify(e.GetCtx(), pgtype.UUID{
 		Bytes: e.EmailID,
 		Valid: true,
 	})

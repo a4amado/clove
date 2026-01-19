@@ -3,7 +3,7 @@ package AppRegionsHandlersV1
 import (
 	"clove/internals/apperrors"
 	"clove/internals/services"
-	"clove/internals/services/types"
+	appservice "clove/internals/services/apps"
 	"encoding/json"
 	"net/http"
 
@@ -26,12 +26,10 @@ func ListAppRegions(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	appSrvs := services.New(types.ServiceParams{
-		Ctx:      r.Context(),
-		Tx:       nil,
-		UseCache: false,
+	appSrvs := services.New(r.Context())
+	regions, err := appSrvs.Apps.Regions.List(appservice.GetAppRegions{
+		AppID: appId,
 	})
-	regions, err := appSrvs.App(appId).Regions().List()
 	if err != nil {
 		apperrors.WriteError(w, &apperrors.AppError{
 			ID:         uuid.New(),

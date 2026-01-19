@@ -6,7 +6,7 @@ import (
 	"clove/internals/meridian"
 	MessageReplication "clove/internals/meridian/replication/message-replication"
 	"clove/internals/services"
-	"clove/internals/services/types"
+	appservice "clove/internals/services/apps"
 	"errors"
 	"io"
 	"net/http"
@@ -70,12 +70,12 @@ func MessageEntry(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 50*1024)
 	defer r.Body.Close()
 
-	srvs := services.New(types.ServiceParams{
-		Ctx:      r.Context(),
-		Tx:       nil,
-		UseCache: true,
+	srvs := services.New(r.Context()).WithCache()
+
+	Apikey, err := srvs.Apps.Keys.Get(appservice.GetKeyParams{
+		KeyID: app_key_id,
+		AppID: appId,
 	})
-	Apikey, err := srvs.App(appId).Key(app_key_id).Get()
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			apperrors.WriteError(w, &apperrors.AppError{
@@ -95,7 +95,7 @@ func MessageEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if Apikey != apiHeadersKey {
+	if Apikey.Key.String != apiHeadersKey {
 		apperrors.WriteError(w, &apperrors.AppError{
 			Code:       ERROR_MESSAGE_ENTRY_UNAUTHORIZED_API_KEY,
 			Message:    "",

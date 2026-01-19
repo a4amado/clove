@@ -3,8 +3,6 @@ package AuthHandlersV1
 import (
 	"clove/internals/apperrors"
 	postgresPool "clove/internals/data/postgres/pool"
-	"clove/internals/services"
-	"clove/internals/services/types"
 	"encoding/json"
 	"net/http"
 
@@ -56,11 +54,5 @@ func SignIn(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	srvs := services.New(types.ServiceParams{
-		Ctx:      r.Context(),
-		Tx:       nil,
-		UseCache: false,
-	})
-	srvs.Users()
 
 }

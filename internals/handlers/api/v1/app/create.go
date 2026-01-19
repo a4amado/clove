@@ -2,17 +2,14 @@ package AppHandlersV1
 
 import (
 	"clove/internals/apperrors"
-	postgresPool "clove/internals/data/postgres/pool"
 	"clove/internals/services"
 	repository "clove/internals/services/generatedRepo"
-	"clove/internals/services/types"
 	"encoding/json"
 	"fmt"
 	"net/http"
 
 	"github.com/google/uuid"
 	set "github.com/hashicorp/go-set"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -64,7 +61,8 @@ func CreateApp(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	tx, err := postgresPool.NewTx(r.Context(), pgx.TxOptions{})
+
+	srvs, tx, err := services.New(r.Context()).WithTx()
 	if err != nil {
 		apperrors.WriteError(w, &apperrors.AppError{
 			Code:       ERROR_CREATE_APP_FAILED_START_TX,
@@ -75,14 +73,7 @@ func CreateApp(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	defer tx.Rollback(r.Context()) // Always rollback on early return
-
-	srvs := services.New(types.ServiceParams{
-		Ctx:      r.Context(),
-		Tx:       &tx,
-		UseCache: true,
-	})
-	app, err := srvs.Apps().Create(repository.App_InsertParams{
+	app, err := srvs.Apps.Create(repository.App_InsertParams{
 		AppSlug:        fmt.Sprintf("%s:%s", uuid.NewString(), body.AppSlug),
 		Regions:        body.Regions,
 		AppType:        repository.AppTypePro,

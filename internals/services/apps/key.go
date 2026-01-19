@@ -9,33 +9,21 @@ import (
 	"github.com/google/uuid"
 )
 
-// Keys returns a service scoped to this app's keys (collection)
-func (s *AppService) Keys() *KeysService {
-	return &KeysService{
-		BaseService: s.BaseService,
-		appID:       s.appID,
-	}
+type ListKeysParams struct {
+	Page  int32
+	AppId uuid.UUID
 }
 
-// Key returns a service scoped to a specific key
-func (s *AppService) Key(keyID uuid.UUID) *KeyService {
-	return &KeyService{
-		BaseService: s.BaseService,
-		appID:       s.appID,
-		keyID:       keyID,
-	}
-}
-
-func (s *KeysService) List(page int32) ([]repository.AppApiKey, error) {
-	if page <= 0 {
-		page = 0
+func (s *KeysService) List(args ListKeysParams) ([]repository.AppApiKey, error) {
+	if args.Page <= 0 {
+		args.Page = 0
 	} else {
-		page = page - 1
+		args.Page = args.Page - 1
 	}
 
-	keys, err := s.Q().App_Key_List(s.CTX(), repository.App_Key_ListParams{
-		AppID:   s.ToPgUUID(s.appID),
-		PageIdx: page,
+	keys, err := s.DB.App_Key_List(s.GetCtx(), repository.App_Key_ListParams{
+		AppID:   s.ToPgUUID(args.AppId),
+		PageIdx: args.Page,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list keys: %w", err)
@@ -48,11 +36,17 @@ func (s *KeysService) List(page int32) ([]repository.AppApiKey, error) {
 	return keys, nil
 }
 
-func (s *KeysService) Create(name, keyString string) (*repository.AppApiKey, error) {
-	key, err := s.Q().App_Key_Insert(s.CTX(), repository.App_Key_InsertParams{
-		AppID: s.ToPgUUID(s.appID),
-		Key:   s.ToPgText(keyString),
-		Name:  s.ToPgText(name),
+type CreateKeyParams struct {
+	AppID     uuid.UUID
+	KeyString string
+	KeyName   string
+}
+
+func (s *KeysService) Create(args CreateKeyParams) (*repository.AppApiKey, error) {
+	key, err := s.DB.App_Key_Insert(s.GetCtx(), repository.App_Key_InsertParams{
+		AppID: s.ToPgUUID(args.AppID),
+		Key:   s.ToPgText(args.KeyString),
+		Name:  s.ToPgText(args.KeyName),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create key: %w", err)
@@ -60,41 +54,46 @@ func (s *KeysService) Create(name, keyString string) (*repository.AppApiKey, err
 
 	// Cache the key async
 	s.CacheAsync(func(ctx context.Context) error {
-		return cache.Apps().Keys().Set(s.CTX(), s.appID, key.ID.Bytes, key.Key.String)
+		return cache.Apps().Keys().Set(s.GetCtx(), args.AppID, key.ID.Bytes, key.Key.String)
 	})
 
 	return &key, nil
 }
 
-func (s *KeyService) Get() (string, error) {
+type GetKeyParams struct {
+	KeyID uuid.UUID
+	AppID uuid.UUID
+}
+
+func (s *KeysService) Get(args GetKeyParams) (*repository.AppApiKey, error) {
 	// Try cache first
-	if s.Cache() {
-		if keyStr, err := cache.Apps().Keys().Get(s.CTX(), s.appID, s.keyID); err == nil {
-			return *keyStr, nil
-		}
-	}
 
 	// Fetch from DB
-	key, err := s.Q().App_Key_Select(s.CTX(), repository.App_Key_SelectParams{
-		KeyID: s.ToPgUUID(s.keyID),
-		AppID: s.ToPgUUID(s.appID),
+	key, err := s.DB.App_Key_Select(s.GetCtx(), repository.App_Key_SelectParams{
+		KeyID: s.ToPgUUID(args.KeyID),
+		AppID: s.ToPgUUID(args.KeyID),
 	})
 	if err != nil {
-		return "", fmt.Errorf("failed to get key: %w", err)
+		return nil, fmt.Errorf("failed to get key: %w", err)
 	}
 
 	// Cache async
 	s.CacheAsync(func(ctx context.Context) error {
-		return cache.Apps().Keys().Set(s.CTX(), s.appID, s.keyID, key.Key.String)
+		return cache.Apps().Keys().Set(s.GetCtx(), args.AppID, args.KeyID, key.Key.String)
 	})
 
-	return key.Key.String, nil
+	return &key, nil
 }
 
-func (s *KeyService) Delete() error {
-	rowsAffected, err := s.Q().App_Key_Delete(s.CTX(), repository.App_Key_DeleteParams{
-		ID:    s.ToPgUUID(s.keyID),
-		AppID: s.ToPgUUID(s.appID),
+type DeleteKeyParams struct {
+	AppID uuid.UUID
+	KeyID uuid.UUID
+}
+
+func (s *KeysService) Delete(args DeleteKeyParams) error {
+	rowsAffected, err := s.DB.App_Key_Delete(s.GetCtx(), repository.App_Key_DeleteParams{
+		ID:    s.ToPgUUID(args.KeyID),
+		AppID: s.ToPgUUID(args.AppID),
 	})
 	if err != nil {
 		return fmt.Errorf("failed to delete key: %w", err)
@@ -106,7 +105,7 @@ func (s *KeyService) Delete() error {
 
 	// Invalidate cache async
 	s.CacheAsync(func(ctx context.Context) error {
-		return cache.Apps().Keys().Delete(s.CTX(), s.appID, s.keyID)
+		return cache.Apps().Keys().Delete(s.GetCtx(), args.AppID, args.KeyID)
 	})
 
 	return nil

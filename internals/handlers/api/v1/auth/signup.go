@@ -3,9 +3,7 @@ package AuthHandlersV1
 import (
 	"clove/internals/apiguard"
 	"clove/internals/apperrors"
-	postgresPool "clove/internals/data/postgres/pool"
 	"clove/internals/services"
-	"clove/internals/services/types"
 	userservice "clove/internals/services/user"
 	"clove/internals/tokenguard"
 	"encoding/json"
@@ -15,7 +13,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
@@ -45,7 +42,7 @@ func User_Signup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tx, err := postgresPool.NewTx(r.Context(), pgx.TxOptions{})
+	srvs, tx, err := services.New(r.Context()).WithTx()
 	if err != nil {
 
 		apperrors.WriteError(w, &apperrors.AppError{
@@ -54,16 +51,8 @@ func User_Signup(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	defer tx.Rollback(r.Context())
-
-	srvs := services.New(types.ServiceParams{
-		Ctx:      r.Context(),
-		Tx:       &tx,
-		UseCache: false,
-	})
-
 	code, _ := apiguard.RandomSecretKey()
-	user, err := srvs.Users().Insert(userservice.InsertUserParams{
+	user, err := srvs.Users.Insert(userservice.InsertUserParams{
 		Email:           body.Email,
 		Password:        body.Password,
 		EmailVerifycode: code,

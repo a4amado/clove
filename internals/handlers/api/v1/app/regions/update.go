@@ -3,8 +3,8 @@ package AppRegionsHandlersV1
 import (
 	"clove/internals/apperrors"
 	"clove/internals/services"
+	appservice "clove/internals/services/apps"
 	repository "clove/internals/services/generatedRepo"
-	"clove/internals/services/types"
 	"encoding/json"
 	"net/http"
 
@@ -60,12 +60,11 @@ func UpdateAppRegions(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Regions array shal not contain any doublicates", http.StatusBadRequest)
 		return
 	}
-	appsrvs := services.New(types.ServiceParams{
-		Ctx:      r.Context(),
-		Tx:       nil,
-		UseCache: false,
+	appsrvs := services.New(r.Context())
+	err = appsrvs.Apps.Regions.Update(appservice.UpdateRegions{
+		Regions: uniqueRegionsSlice,
+		AppID:   appId,
 	})
-	err = appsrvs.App(appId).Regions().Update(body.Regions)
 	if err != nil {
 		http.Error(w, "Failed To Update App Regions", http.StatusInternalServerError)
 		return

@@ -5,7 +5,7 @@ import (
 	"clove/internals/apperrors"
 	envConsts "clove/internals/consts/env"
 	"clove/internals/services"
-	"clove/internals/services/types"
+	appservice "clove/internals/services/apps"
 	"clove/internals/tokenguard"
 	"encoding/json"
 	"errors"
@@ -53,12 +53,10 @@ func CreateAppOneTimeToken(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	appsrvs := services.New(types.ServiceParams{
-		Ctx:      r.Context(),
-		Tx:       nil,
-		UseCache: false,
+	appsrvs := services.New(r.Context())
+	app, err := appsrvs.Apps.Get(appservice.GetParams{
+		AppID: appId,
 	})
-	app, err := appsrvs.App(appId).Get()
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			apperrors.WriteError(w, &apperrors.AppError{
@@ -78,7 +76,11 @@ func CreateAppOneTimeToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	key, err := appsrvs.App(appId).Key(body.ApiKeyId).Get()
+	key, err := appsrvs.Apps.Keys.Get(appservice.GetKeyParams{
+		KeyID: body.ApiKeyId,
+		AppID: appId,
+	})
+
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			apperrors.WriteError(w, &apperrors.AppError{
@@ -97,7 +99,7 @@ func CreateAppOneTimeToken(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	if key != apiguard.GetHeaderApi(r) {
+	if key.Key.String != apiguard.GetHeaderApi(r) {
 		apperrors.WriteError(w, &apperrors.AppError{
 			ID:         uuid.New(),
 			Code:       ERROR_ONE_TIME_TOKEN_KEY_ID_MISMATCH,

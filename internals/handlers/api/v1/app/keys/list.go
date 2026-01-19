@@ -3,7 +3,7 @@ package AppKeysHandlersV1
 import (
 	"clove/internals/apperrors"
 	"clove/internals/services"
-	"clove/internals/services/types"
+	appservice "clove/internals/services/apps"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -43,12 +43,12 @@ func ListAppApiKeys(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	services := services.New(types.ServiceParams{
-		Ctx:      r.Context(),
-		Tx:       nil,
-		UseCache: false,
+	srvs := services.New(r.Context()).WithCache()
+
+	keys, err := srvs.Apps.Keys.List(appservice.ListKeysParams{
+		AppId: appId,
+		Page:  int32(page_idx),
 	})
-	keys, err := services.App(appId).Keys().List(int32(page_idx))
 	for idx := range keys {
 		keys[idx].Key = pgtype.Text{
 			String: "[Redacted]",

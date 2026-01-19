@@ -7,7 +7,7 @@ import (
 	"clove/internals/meridian"
 	"clove/internals/meridian/fanout"
 	"clove/internals/services"
-	"clove/internals/services/types"
+	appservice "clove/internals/services/apps"
 	"clove/internals/tokenguard"
 	"context"
 	"encoding/json"
@@ -103,12 +103,10 @@ func UserConnect(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	srvs := services.New(types.ServiceParams{
-		Ctx:      r.Context(),
-		Tx:       nil,
-		UseCache: true,
+	srvs := services.New(r.Context())
+	_, err = srvs.Apps.Get(appservice.GetParams{
+		AppID: appUUID,
 	})
-	_, err = srvs.App(appUUID).Get()
 	if err != nil {
 		apperrors.WriteWsError(conn, &lock, &apperrors.AppError{
 			Code:       ERROR_USER_CONNECT_APP_NOT_FOUND,

@@ -17,30 +17,33 @@ type ServiceParams struct {
 }
 
 func NewBaseService(ctx context.Context, queries *repository.Queries, useCache bool) *BaseService {
-
 	return &BaseService{
 		ctx:      ctx,
-		queries:  queries,
 		useCache: useCache,
 	}
 }
 
 type BaseService struct {
 	ctx      context.Context
-	queries  *repository.Queries
+	DB       *repository.Queries
 	useCache bool
-	tx       pgx.Tx
 }
 
-func (b *BaseService) Cache() bool {
+func (b *BaseService) WithCache() *BaseService {
+	b.useCache = true
+	return b
+}
+
+func (b *BaseService) IsCache() bool {
 	return b.useCache
 }
-func (b *BaseService) CTX() context.Context {
+
+func (b *BaseService) GetCtx() context.Context {
 	return b.ctx
 }
-
-func (b *BaseService) Q() *repository.Queries {
-	return b.queries
+func (b *BaseService) WithCtx(ctx context.Context) *BaseService {
+	b.ctx = ctx
+	return b
 }
 
 func (b *BaseService) ToPgUUID(id uuid.UUID) pgtype.UUID {

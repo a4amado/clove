@@ -2,13 +2,11 @@ package AppKeysHandlersV1
 
 import (
 	"clove/internals/apperrors"
-	postgresPool "clove/internals/data/postgres/pool"
 	"clove/internals/services"
-	"clove/internals/services/types"
+	appservice "clove/internals/services/apps"
 	"net/http"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 )
 
 const (
@@ -41,7 +39,7 @@ func DeleteAppApiKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tx, err := postgresPool.NewTx(r.Context(), pgx.TxOptions{})
+	srvs, tx, err := services.New(r.Context()).WithCache().WithTx()
 	if err != nil {
 		apperrors.WriteError(w, &apperrors.AppError{
 			ID:         uuid.New(),
@@ -51,13 +49,10 @@ func DeleteAppApiKey(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	tx.Begin(r.Context())
-	srvs := services.New(types.ServiceParams{
-		Ctx:      r.Context(),
-		Tx:       &tx,
-		UseCache: true,
+	err = srvs.Apps.Keys.Delete(appservice.DeleteKeyParams{
+		AppID: apId,
+		KeyID: AppApiKey,
 	})
-	err = srvs.App(apId).Key(AppApiKey).Delete()
 
 	if err != nil {
 		apperrors.WriteError(w, &apperrors.AppError{

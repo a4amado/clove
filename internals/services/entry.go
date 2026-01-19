@@ -6,47 +6,47 @@ import (
 	repository "clove/internals/services/generatedRepo"
 	"clove/internals/services/types"
 	userservice "clove/internals/services/user"
+	"context"
 
-	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 type router struct {
 	baseService *types.BaseService
+	Apps        *appservice.AppsService
+	Users       *userservice.Users
 }
 
-func New(args types.ServiceParams) *router {
+func New(ctx context.Context) *router {
 
 	q := repository.New(postgresPool.Client())
-	if args.Tx != nil {
-		q = q.WithTx(*args.Tx)
+
+	router := &router{
+		baseService: &types.BaseService{
+			DB: q,
+		},
 	}
-	return &router{
-		baseService: types.NewBaseService(args.Ctx, q, args.UseCache),
+	router.Apps = &appservice.AppsService{
+		BaseService: router.baseService,
 	}
+	router.Users = &userservice.Users{
+		BaseService: router.baseService,
+	}
+
+	return router
 }
-func (r *router) App(appId uuid.UUID) *appservice.AppService {
-	appsrvs := &appservice.AppService{
-		BaseService: r.baseService,
-	}
-	appsrvs.SetAppID(appId)
-	return appsrvs
+
+func (b *router) WithCache() *router {
+	b.baseService.WithCache()
+	return b
+
 }
-func (r *router) Apps() *appservice.AppsService {
-	appsrvs := &appservice.AppsService{
-		BaseService: r.baseService,
+func (b *router) WithTx() (*router, pgx.Tx, error) {
+	tx, err := postgresPool.NewTx(b.baseService.GetCtx(), pgx.TxOptions{})
+	if err != nil {
+		return nil, nil, err
 	}
-	return appsrvs
-}
-func (r *router) User(userId uuid.UUID) *userservice.User {
-	usrsrvs := &userservice.User{
-		BaseService: r.baseService,
-	}
-	usrsrvs.SetUserId(userId)
-	return usrsrvs
-}
-func (r *router) Users() *userservice.Users {
-	userssrvs := &userservice.Users{
-		BaseService: r.baseService,
-	}
-	return userssrvs
+	b.baseService.DB = b.baseService.DB.WithTx(tx)
+
+	return b, tx, nil
 }

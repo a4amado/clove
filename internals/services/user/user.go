@@ -12,12 +12,12 @@ type InsertUserParams struct {
 
 func (us *Users) Insert(args InsertUserParams) (*repository.User, error) {
 
-	user, err := us.Q().User_Insert(us.CTX(), args.Password)
+	user, err := us.DB.User_Insert(us.GetCtx(), args.Password)
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = us.Q().UserEmail_Insert(us.CTX(), repository.UserEmail_InsertParams{
+	_, err = us.DB.UserEmail_Insert(us.GetCtx(), repository.UserEmail_InsertParams{
 		Email:  args.Email,
 		UserID: user.ID,
 		Code:   args.EmailVerifycode,
