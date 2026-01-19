@@ -3,6 +3,7 @@ package AuthHandlersV1
 import (
 	"clove/internals/apperrors"
 	postgresPool "clove/internals/data/postgres/pool"
+	"clove/internals/services"
 	"encoding/json"
 	"net/http"
 
@@ -33,6 +34,8 @@ func SignIn(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	srvs := services.New(r.Context())
+
 	tx, err := postgresPool.NewTx(r.Context(), pgx.TxOptions{})
 
 	if err != nil {

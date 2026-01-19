@@ -20,9 +20,14 @@ type GetParams struct {
 }
 
 func (s *AppsService) Get(args GetParams) (*repository.App, error) {
+
 	app, err := s.DB.App_Select(s.GetCtx(), s.ToPgUUID(args.AppID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert app: %w", err)
 	}
 	return &app, nil
+}
+
+func (s *AppsService) Update() {
+
 }
