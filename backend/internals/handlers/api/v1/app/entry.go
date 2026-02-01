@@ -2,8 +2,8 @@
 package AppHandlersV1
 
 import (
-	"clove/internals/apiguard"
 	"clove/internals/apperrors"
+	"clove/internals/auth/apiguard"
 	"clove/internals/meridian"
 	MessageReplication "clove/internals/meridian/replication/message-replication"
 	"clove/internals/services"

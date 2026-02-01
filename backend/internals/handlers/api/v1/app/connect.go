@@ -1,8 +1,8 @@
 package AppHandlersV1
 
 import (
-	"clove/internals/apiguard"
 	"clove/internals/apperrors"
+	"clove/internals/auth/apiguard"
 	"clove/internals/auth/tokenguard"
 	"clove/internals/heartbeat/dogpile"
 	"clove/internals/meridian"
