@@ -1,8 +1,8 @@
 package AppKeysHandlersV1
 
 import (
-	"clove/internals/apiguard"
 	"clove/internals/apperrors"
+	"clove/internals/auth/apiguard"
 	"clove/internals/services"
 	appservice "clove/internals/services/apps"
 	"encoding/json"

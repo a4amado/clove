@@ -1,11 +1,11 @@
 package AuthHandlersV1
 
 import (
-	"clove/internals/apiguard"
 	"clove/internals/apperrors"
+	"clove/internals/auth/apiguard"
+	"clove/internals/auth/tokenguard"
 	"clove/internals/services"
 	userservice "clove/internals/services/user"
-	"clove/internals/tokenguard"
 	"encoding/json"
 	"errors"
 	"net/http"

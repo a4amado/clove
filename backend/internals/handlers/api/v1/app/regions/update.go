@@ -17,9 +17,9 @@ type UpdateAppRegionsBody struct {
 }
 
 const (
-	ERROR_UPDATE_APP_REGIONS_INVALID_ID               = "clove.io/app/region/update/invalid.app.id"
-	ERROR_UPDATE_APP_REGIONS_INVALID_BODY             = "clove.io/app/region/update/invalid.req.body"
-	ERROR_UPDATE_APP_REGIONS_SOME_REGIONS_ARE_INVALID = "clove.io/app/region/update/invalid.one.or.more.regions"
+	PublicErrUpdateAppRegionsInvalidId   = "clove.io/app/region/update/invalid.app.id"
+	PublicErrUpdateAppRegionsInvalidBody = "clove.io/app/region/update/invalid.req.body"
+	PublicErrUpdateAppRegionsAreInvalid  = "clove.io/app/region/update/invalid.one.or.more.regions"
 )
 
 func UpdateAppRegions(w http.ResponseWriter, r *http.Request) {
@@ -27,7 +27,7 @@ func UpdateAppRegions(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		apperrors.WriteError(w, &apperrors.AppError{
 			ID:         uuid.New(),
-			Code:       ERROR_UPDATE_APP_REGIONS_INVALID_ID,
+			Code:       PublicErrUpdateAppRegionsInvalidId,
 			Message:    "",
 			StatusCode: http.StatusBadRequest,
 		})
@@ -37,7 +37,7 @@ func UpdateAppRegions(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		apperrors.WriteError(w, &apperrors.AppError{
 			ID:         uuid.New(),
-			Code:       ERROR_UPDATE_APP_REGIONS_INVALID_BODY,
+			Code:       PublicErrUpdateAppRegionsInvalidBody,
 			Message:    "",
 			StatusCode: http.StatusBadRequest,
 		})
@@ -49,7 +49,7 @@ func UpdateAppRegions(w http.ResponseWriter, r *http.Request) {
 		if !region.Valid() {
 			apperrors.WriteError(w, &apperrors.AppError{
 				ID:         uuid.New(),
-				Code:       ERROR_UPDATE_APP_REGIONS_SOME_REGIONS_ARE_INVALID,
+				Code:       PublicErrUpdateAppRegionsAreInvalid,
 				Message:    "",
 				StatusCode: http.StatusBadRequest,
 			})
@@ -57,7 +57,13 @@ func UpdateAppRegions(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if len(uniqueRegionsSlice) != len(body.Regions) {
-		http.Error(w, "Regions array shal not contain any doublicates", http.StatusBadRequest)
+		apperrors.WriteError(w, &apperrors.AppError{
+			ID:         uuid.New(),
+			Code:       PublicErrUpdateAppRegionsAreInvalid,
+			Message:    "Regions array shal not contain any doublicates",
+			StatusCode: http.StatusBadRequest,
+		})
+
 		return
 	}
 	appsrvs := services.New(r.Context())

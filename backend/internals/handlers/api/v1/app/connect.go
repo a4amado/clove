@@ -3,12 +3,12 @@ package AppHandlersV1
 import (
 	"clove/internals/apiguard"
 	"clove/internals/apperrors"
+	"clove/internals/auth/tokenguard"
 	"clove/internals/heartbeat/dogpile"
 	"clove/internals/meridian"
 	"clove/internals/meridian/fanout"
 	"clove/internals/services"
 	appservice "clove/internals/services/apps"
-	"clove/internals/tokenguard"
 	"context"
 	"encoding/json"
 	"net/http"

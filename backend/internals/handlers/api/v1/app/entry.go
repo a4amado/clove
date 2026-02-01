@@ -1,3 +1,4 @@
+// this endpoint is
 package AppHandlersV1
 
 import (
@@ -28,7 +29,7 @@ const (
 	ERROR_MESSAGE_ENTRY_BAD_BODY             = "ERROR_MESSAGE_ENTRY_BAD_BODY"
 )
 
-func MessageEntry(w http.ResponseWriter, r *http.Request) {
+func WSMessageEntry(w http.ResponseWriter, r *http.Request) {
 	appId, err := uuid.Parse(r.PathValue("app_id"))
 	if err != nil {
 		apperrors.WriteError(w, &apperrors.AppError{

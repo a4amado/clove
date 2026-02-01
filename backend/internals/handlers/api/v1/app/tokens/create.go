@@ -1,12 +1,12 @@
 package AppTokensHandlersV1
 
 import (
-	"clove/internals/apiguard"
 	"clove/internals/apperrors"
+	"clove/internals/auth/apiguard"
+	"clove/internals/auth/tokenguard"
 	envConsts "clove/internals/consts/env"
 	"clove/internals/services"
 	appservice "clove/internals/services/apps"
-	"clove/internals/tokenguard"
 	"encoding/json"
 	"errors"
 	"net/http"

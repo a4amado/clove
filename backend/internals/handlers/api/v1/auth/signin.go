@@ -2,13 +2,10 @@ package AuthHandlersV1
 
 import (
 	"clove/internals/apperrors"
-	postgresPool "clove/internals/data/postgres/pool"
-	"clove/internals/services"
 	"encoding/json"
 	"net/http"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 )
 
 type SignInBody struct {
@@ -31,29 +28,6 @@ func SignIn(w http.ResponseWriter, r *http.Request) {
 			Code:       ERROR_SIGNIN_INVALID_BODY,
 			Message:    "",
 			StatusCode: http.StatusBadRequest,
-		})
-		return
-	}
-	srvs := services.New(r.Context())
-
-	tx, err := postgresPool.NewTx(r.Context(), pgx.TxOptions{})
-
-	if err != nil {
-		apperrors.WriteError(w, &apperrors.AppError{
-			ID:         uuid.New(),
-			Code:       ERROR_SIGNIN_FAILD_TO_GRAB_TX,
-			Message:    "",
-			StatusCode: http.StatusInternalServerError,
-		})
-		return
-	}
-	tx, err = tx.Begin(r.Context())
-	if err != nil {
-		apperrors.WriteError(w, &apperrors.AppError{
-			ID:         uuid.New(),
-			Code:       ERROR_SIGNIN_FAILD_TO_START_TX,
-			Message:    "",
-			StatusCode: http.StatusInternalServerError,
 		})
 		return
 	}
