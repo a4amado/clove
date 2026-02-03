@@ -72,6 +72,70 @@ func AllAppTypeValues() []AppType {
 	}
 }
 
+type Operation string
+
+const (
+	OperationCREATE  Operation = "CREATE"
+	OperationREAD    Operation = "READ"
+	OperationDESTROY Operation = "DESTROY"
+	OperationUPDATE  Operation = "UPDATE"
+)
+
+func (e *Operation) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = Operation(s)
+	case string:
+		*e = Operation(s)
+	default:
+		return fmt.Errorf("unsupported scan type for Operation: %T", src)
+	}
+	return nil
+}
+
+type NullOperation struct {
+	Operation Operation `json:"operation"`
+	Valid     bool      `json:"valid"` // Valid is true if Operation is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullOperation) Scan(value interface{}) error {
+	if value == nil {
+		ns.Operation, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.Operation.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullOperation) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.Operation), nil
+}
+
+func (e Operation) Valid() bool {
+	switch e {
+	case OperationCREATE,
+		OperationREAD,
+		OperationDESTROY,
+		OperationUPDATE:
+		return true
+	}
+	return false
+}
+
+func AllOperationValues() []Operation {
+	return []Operation{
+		OperationCREATE,
+		OperationREAD,
+		OperationDESTROY,
+		OperationUPDATE,
+	}
+}
+
 type Region string
 
 const (
@@ -124,6 +188,67 @@ func (e Region) Valid() bool {
 func AllRegionValues() []Region {
 	return []Region{
 		RegionDk1,
+	}
+}
+
+type Resource string
+
+const (
+	ResourceAPP Resource = "APP"
+	ResourceKEY Resource = "KEY"
+	ResourceOTT Resource = "OTT"
+)
+
+func (e *Resource) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = Resource(s)
+	case string:
+		*e = Resource(s)
+	default:
+		return fmt.Errorf("unsupported scan type for Resource: %T", src)
+	}
+	return nil
+}
+
+type NullResource struct {
+	Resource Resource `json:"resource"`
+	Valid    bool     `json:"valid"` // Valid is true if Resource is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullResource) Scan(value interface{}) error {
+	if value == nil {
+		ns.Resource, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.Resource.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullResource) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.Resource), nil
+}
+
+func (e Resource) Valid() bool {
+	switch e {
+	case ResourceAPP,
+		ResourceKEY,
+		ResourceOTT:
+		return true
+	}
+	return false
+}
+
+func AllResourceValues() []Resource {
+	return []Resource{
+		ResourceAPP,
+		ResourceKEY,
+		ResourceOTT,
 	}
 }
 

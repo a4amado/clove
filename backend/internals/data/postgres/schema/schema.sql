@@ -58,4 +58,8 @@ CREATE TABLE "app_api_key" (
     "name" VARCHAR(50),
     CONSTRAINT "api_key_app_fk" FOREIGN KEY ("app_id") REFERENCES "app"("id")
 );
-create INDEX "app_api_key_appId_idx"  on "app_api_key"("app_id")
+create INDEX "app_api_key_appId_idx"  on "app_api_key"("app_id");
+
+
+CREATE TYPE "Resource"  as ENUM('APP', 'KEY', 'OTT');
+CREATE TYPE "Operation"  as ENUM('CREATE', 'READ', 'DESTROY', 'UPDATE');

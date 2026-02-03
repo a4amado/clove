@@ -30,7 +30,21 @@ func (a *AuthManager) IsLoggedIn() bool {
 	return a.authMethod != Unknowen
 }
 
-func ParseAuthFromRequest(r *http.Request) {
+func AuthMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		session, err := ParseAuthFromRequest(r)
+		if err != nil {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		new_ctx := context.WithValue(r.Context(), "session", session)
+		r.WithContext(new_ctx)
+		next.ServeHTTP(w, r)
+	})
+}
+
+func ParseAuthFromRequest(r *http.Request) (*tokenguard.SessionTokenClaim, error) {
 	d, err := browser.NewBrowser(r.UserAgent())
 	if err != nil {
 		new_ctx := context.WithValue(r.Context(), "session", nil)
@@ -48,23 +62,11 @@ func ParseAuthFromRequest(r *http.Request) {
 			r.WithContext(new_ctx)
 		}
 		content := cookie.Value
-		session, err := tokenguard.ValidateSessionToken(content)
-		if err != nil {
-			new_ctx := context.WithValue(r.Context(), "session", nil)
-			r.WithContext(new_ctx)
-		}
-
-		new_ctx := context.WithValue(r.Context(), "session", session)
-		r.WithContext(new_ctx)
+		return tokenguard.ValidateSessionToken(content)
 
 	} else {
 		content := apiguard.GetHeaderApi(r)
-		session, err := tokenguard.ValidateSessionToken(content)
-		if err != nil {
-			new_ctx := context.WithValue(r.Context(), "session", nil)
-			r.WithContext(new_ctx)
-		}
-		new_ctx := context.WithValue(r.Context(), "session", session)
-		r.WithContext(new_ctx)
+		return tokenguard.ValidateSessionToken(content)
+
 	}
 }
