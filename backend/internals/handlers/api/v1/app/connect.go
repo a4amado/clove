@@ -2,8 +2,8 @@ package AppHandlersV1
 
 import (
 	"clove/internals/apperrors"
-	"clove/internals/auth/apiguard"
-	"clove/internals/auth/tokenguard"
+	"clove/internals/auth"
+
 	"clove/internals/heartbeat/dogpile"
 	"clove/internals/meridian"
 	"clove/internals/meridian/fanout"
@@ -52,6 +52,16 @@ func (m *MessageToClient) Binary() ([]byte, error) {
 // and subscribes the resulting connection to the requested channel(s).
 func UserConnect(w http.ResponseWriter, r *http.Request) {
 
+	session, err := auth.ParseSessionFromRequest(r)
+	if err != nil {
+		auth.UnAuthResponse(w)
+		return
+	}
+	if !session.Permessions.Can(auth.DELIVERY, auth.READ) {
+		auth.UnAuthResponse(w)
+		return
+	}
+
 	lock := sync.Mutex{}
 	ctx := r.Context()
 	wsUpgrader := websocket.Upgrader{}
@@ -67,6 +77,18 @@ func UserConnect(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+
+	claims, err := auth.ParseOneTimeTokenFromRequest(r)
+	if err != nil {
+		apperrors.WriteWsError(conn, &lock, &apperrors.AppError{
+			Code:       ERROR_USER_CONNECT_INVALID_TOKEN,
+			Message:    "",
+			StatusCode: http.StatusUnauthorized,
+
+			ID: uuid.New(),
+		})
+		return
+	}
 	defer conn.Close()
 	appUUID, err := uuid.Parse(r.PathValue("app_id"))
 	if err != nil {
@@ -74,19 +96,6 @@ func UserConnect(w http.ResponseWriter, r *http.Request) {
 			Code:       ERROR_USER_CONNECT_INVALID_APP_ID,
 			Message:    "",
 			StatusCode: http.StatusBadRequest,
-
-			ID: uuid.New(),
-		})
-		return
-	}
-
-	token := apiguard.GetHeaderApi(r)
-	claims, err := tokenguard.ValidateOneTimeToken(token)
-	if err != nil {
-		apperrors.WriteWsError(conn, &lock, &apperrors.AppError{
-			Code:       ERROR_USER_CONNECT_INVALID_TOKEN,
-			Message:    "",
-			StatusCode: http.StatusUnauthorized,
 
 			ID: uuid.New(),
 		})

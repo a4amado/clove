@@ -50,16 +50,15 @@ create index app_id_idx on "app"("id");
 create index app_slug_idx on "app"("app_slug");
 
 CREATE TABLE "app_api_key" (
-    "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    "id" VARCHAR(64) PRIMARY KEY, -- hased version of the actual key
     "app_id" UUID,
     "created_at" TIMESTAMP DEFAULT NOW(),
     "updated_at" TIMESTAMP DEFAULT NOW(),
-    "key" TEXT,
     "name" VARCHAR(50),
+    "prefix" VARCHAR(5),
+    "suffix" VARCHAR(5),
+    "expires_at" TIMESTAMP NOT NULL,
     CONSTRAINT "api_key_app_fk" FOREIGN KEY ("app_id") REFERENCES "app"("id")
 );
 create INDEX "app_api_key_appId_idx"  on "app_api_key"("app_id");
 
-
-CREATE TYPE "Resource"  as ENUM('APP', 'KEY', 'OTT');
-CREATE TYPE "Operation"  as ENUM('CREATE', 'READ', 'DESTROY', 'UPDATE');

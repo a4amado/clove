@@ -2,8 +2,8 @@ package AuthHandlersV1
 
 import (
 	"clove/internals/apperrors"
-	"clove/internals/auth/apiguard"
-	"clove/internals/auth/tokenguard"
+	"clove/internals/auth"
+
 	"clove/internals/services"
 	userservice "clove/internals/services/user"
 	"encoding/json"
@@ -51,7 +51,7 @@ func User_Signup(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	code, _ := apiguard.RandomSecretKey()
+	code, _ := auth.GenRandKey(10)
 	user, err := srvs.Users.Insert(userservice.InsertUserParams{
 		Email:           body.Email,
 		Password:        body.Password,
@@ -88,7 +88,7 @@ func User_Signup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session_token, _ := tokenguard.GenerateSessionToken(*user)
+	session_token, _ := auth.GenerateSessionToken(*user)
 	r.AddCookie(&http.Cookie{
 		Name:     "token",
 		Value:    session_token,

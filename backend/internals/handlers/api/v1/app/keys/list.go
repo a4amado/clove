@@ -2,6 +2,7 @@ package AppKeysHandlersV1
 
 import (
 	"clove/internals/apperrors"
+	"clove/internals/auth"
 	"clove/internals/services"
 	appservice "clove/internals/services/apps"
 	"encoding/json"
@@ -9,7 +10,6 @@ import (
 	"strconv"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const (
@@ -18,6 +18,15 @@ const (
 )
 
 func ListAppApiKeys(w http.ResponseWriter, r *http.Request) {
+	session, err := auth.ParseSessionFromRequest(r)
+	if err != nil {
+		auth.UnAuthResponse(w)
+		return
+	}
+	if !session.Permessions.Can(auth.KEY, auth.READ) {
+		auth.UnAuthResponse(w)
+		return
+	}
 	appId, err := uuid.Parse(r.PathValue("app_id"))
 
 	if err != nil || appId == uuid.Nil {
@@ -49,13 +58,7 @@ func ListAppApiKeys(w http.ResponseWriter, r *http.Request) {
 		AppId: appId,
 		Page:  int32(page_idx),
 	})
-	for idx := range keys {
-		keys[idx].Key = pgtype.Text{
-			String: "[Redacted]",
-			Valid:  true,
-		}
 
-	}
 	if err != nil {
 		http.Error(w, "Insternal server error", http.StatusInternalServerError)
 		return

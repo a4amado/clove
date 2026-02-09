@@ -28,7 +28,7 @@ func (ar *AppReplication) PublishReplicatableAppMsgToRabbitMQ(ctx context.Contex
 	var targetRegions []repository.Region
 
 	// Try saving to local valkey first
-	err = cache.Apps().Set(ctx, msg.App)
+	err = cache.Set(ctx, cache.FormatAppCacheKey(msg.App.ID.Bytes), msg.App, time.Hour*24*30)
 	if err != nil {
 		// If local save fails, send to all regions including source
 		// to ensure eventual consistency

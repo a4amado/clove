@@ -2,6 +2,7 @@ package AppRegionsHandlersV1
 
 import (
 	"clove/internals/apperrors"
+	"clove/internals/auth"
 	"clove/internals/services"
 	appservice "clove/internals/services/apps"
 	repository "clove/internals/services/generatedRepo"
@@ -23,6 +24,15 @@ const (
 )
 
 func UpdateAppRegions(w http.ResponseWriter, r *http.Request) {
+	session, err := auth.ParseSessionFromRequest(r)
+	if err != nil {
+		auth.UnAuthResponse(w)
+		return
+	}
+	if !session.Permessions.Can(auth.KEY, auth.UPDATE) {
+		auth.UnAuthResponse(w)
+		return
+	}
 	appId, err := uuid.Parse(r.PathValue("app_id"))
 	if err != nil {
 		apperrors.WriteError(w, &apperrors.AppError{

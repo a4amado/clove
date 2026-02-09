@@ -27,7 +27,7 @@ WHERE "id" = $1 and "app_id" = $2
 `
 
 type App_Key_DeleteParams struct {
-	ID    pgtype.UUID `json:"id"`
+	ID    string      `json:"id"`
 	AppID pgtype.UUID `json:"app_id"`
 }
 

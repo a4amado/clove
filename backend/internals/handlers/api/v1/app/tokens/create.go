@@ -2,8 +2,7 @@ package AppTokensHandlersV1
 
 import (
 	"clove/internals/apperrors"
-	"clove/internals/auth/apiguard"
-	"clove/internals/auth/tokenguard"
+	"clove/internals/auth"
 	envConsts "clove/internals/consts/env"
 	"clove/internals/services"
 	appservice "clove/internals/services/apps"
@@ -16,8 +15,7 @@ import (
 )
 
 type CreateAppOneTimeTokenBody struct {
-	ChannelID string    `json:"channel_id"`
-	ApiKeyId  uuid.UUID `json:"api_key_id"`
+	ChannelID string `json:"channel_id"`
 }
 
 const (
@@ -32,6 +30,15 @@ const (
 )
 
 func CreateAppOneTimeToken(w http.ResponseWriter, r *http.Request) {
+	session, err := auth.ParseSessionFromRequest(r)
+	if err != nil {
+		auth.UnAuthResponse(w)
+		return
+	}
+	if !session.Permessions.Can(auth.OneTimeToken, auth.CREATE) {
+		auth.UnAuthResponse(w)
+		return
+	}
 	appId, err := uuid.Parse(r.PathValue("app_id"))
 	if err != nil {
 		apperrors.WriteError(w, &apperrors.AppError{
@@ -75,40 +82,10 @@ func CreateAppOneTimeToken(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-
-	key, err := appsrvs.Apps.Keys.Get(appservice.GetKeyParams{
-		KeyID: body.ApiKeyId,
-		AppID: appId,
-	})
-
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			apperrors.WriteError(w, &apperrors.AppError{
-				ID:         uuid.New(),
-				Code:       ERROR_CREATE_ONE_TIME_TOKEN_KEY_NOT_FOUND,
-				Message:    "",
-				StatusCode: http.StatusBadRequest,
-			})
-		} else {
-			apperrors.WriteError(w, &apperrors.AppError{
-				ID:         uuid.New(),
-				Code:       ERROR_CREATE_ONE_TIME_TOKEN_KEY_QUERY_FAILED,
-				Message:    "",
-				StatusCode: http.StatusBadRequest,
-			})
-		}
-		return
+	if !session.Permessions.Can(auth.OneTimeToken, auth.CREATE) {
 	}
-	if key.Key.String != apiguard.GetHeaderApi(r) {
-		apperrors.WriteError(w, &apperrors.AppError{
-			ID:         uuid.New(),
-			Code:       ERROR_ONE_TIME_TOKEN_KEY_ID_MISMATCH,
-			Message:    "",
-			StatusCode: http.StatusBadRequest,
-		})
-		return
-	}
-	token, err := tokenguard.GenerateOneTimeToken(*app, body.ChannelID, body.ApiKeyId)
+
+	token, err := auth.GenerateOneTimeToken(*app, body.ChannelID)
 	if err != nil {
 		apperrors.WriteError(w, &apperrors.AppError{
 			ID:         uuid.New(),

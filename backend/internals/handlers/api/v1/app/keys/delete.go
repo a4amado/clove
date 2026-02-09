@@ -2,6 +2,7 @@ package AppKeysHandlersV1
 
 import (
 	"clove/internals/apperrors"
+	"clove/internals/auth"
 	"clove/internals/services"
 	appservice "clove/internals/services/apps"
 	"net/http"
@@ -18,6 +19,15 @@ const (
 )
 
 func DeleteAppApiKey(w http.ResponseWriter, r *http.Request) {
+	session, err := auth.ParseSessionFromRequest(r)
+	if err != nil {
+		auth.UnAuthResponse(w)
+		return
+	}
+	if !session.Permessions.Can(auth.KEY, auth.DESTROY) {
+		auth.UnAuthResponse(w)
+		return
+	}
 	apId, err := uuid.Parse(r.PathValue("app_id"))
 	if err != nil {
 		apperrors.WriteError(w, &apperrors.AppError{

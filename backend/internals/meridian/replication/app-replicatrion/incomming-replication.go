@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"log"
 	"sync"
+	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -74,7 +75,7 @@ func (ar *AppReplication) BridgeRabbitMQAppReplicatorToRedis(ctx context.Context
 						if !ok {
 							continue
 						}
-						err := cache.Apps().Set(ctx, msg.App)
+						err := cache.Set(ctx, cache.FormatAppCacheKey(msg.App.ID.Bytes), msg.App, time.Hour*24*30)
 						if err != nil {
 							log.Printf("save app error: %v", err)
 							return

@@ -12,27 +12,29 @@ import (
 )
 
 const app_Key_Select = `-- name: App_Key_Select :one
-SELECT id, app_id, created_at, updated_at, key, name
+SELECT id, app_id, created_at, updated_at, name, prefix, suffix, expires_at
 FROM "app_api_key"
 WHERE "id" = $1 AND "app_id" = $2
 limit 1
 `
 
 type App_Key_SelectParams struct {
-	KeyID pgtype.UUID `json:"key_id"`
+	Key   string      `json:"key"`
 	AppID pgtype.UUID `json:"app_id"`
 }
 
 func (q *Queries) App_Key_Select(ctx context.Context, arg App_Key_SelectParams) (AppApiKey, error) {
-	row := q.db.QueryRow(ctx, app_Key_Select, arg.KeyID, arg.AppID)
+	row := q.db.QueryRow(ctx, app_Key_Select, arg.Key, arg.AppID)
 	var i AppApiKey
 	err := row.Scan(
 		&i.ID,
 		&i.AppID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.Key,
 		&i.Name,
+		&i.Prefix,
+		&i.Suffix,
+		&i.ExpiresAt,
 	)
 	return i, err
 }

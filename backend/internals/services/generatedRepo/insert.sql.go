@@ -49,28 +49,38 @@ func (q *Queries) App_Insert(ctx context.Context, arg App_InsertParams) (App, er
 
 const app_Key_Insert = `-- name: App_Key_Insert :one
 INSERT INTO "app_api_key"
-("app_id", "key", "name")
+("app_id", "id", "name", "prefix", "suffix")
 VALUES
-($1, $2, $3)
-RETURNING id, app_id, created_at, updated_at, key, name
+($1, $2, $3, $4, $5)
+RETURNING id, app_id, created_at, updated_at, name, prefix, suffix, expires_at
 `
 
 type App_Key_InsertParams struct {
-	AppID pgtype.UUID `json:"app_id"`
-	Key   pgtype.Text `json:"key"`
-	Name  pgtype.Text `json:"name"`
+	AppID  pgtype.UUID `json:"app_id"`
+	ID     string      `json:"id"`
+	Name   pgtype.Text `json:"name"`
+	Prefix pgtype.Text `json:"prefix"`
+	Suffix pgtype.Text `json:"suffix"`
 }
 
 func (q *Queries) App_Key_Insert(ctx context.Context, arg App_Key_InsertParams) (AppApiKey, error) {
-	row := q.db.QueryRow(ctx, app_Key_Insert, arg.AppID, arg.Key, arg.Name)
+	row := q.db.QueryRow(ctx, app_Key_Insert,
+		arg.AppID,
+		arg.ID,
+		arg.Name,
+		arg.Prefix,
+		arg.Suffix,
+	)
 	var i AppApiKey
 	err := row.Scan(
 		&i.ID,
 		&i.AppID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.Key,
 		&i.Name,
+		&i.Prefix,
+		&i.Suffix,
+		&i.ExpiresAt,
 	)
 	return i, err
 }

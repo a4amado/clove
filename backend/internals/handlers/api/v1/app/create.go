@@ -2,6 +2,7 @@ package AppHandlersV1
 
 import (
 	"clove/internals/apperrors"
+	"clove/internals/auth"
 	"clove/internals/services"
 	repository "clove/internals/services/generatedRepo"
 	"encoding/json"
@@ -35,9 +36,15 @@ const (
 )
 
 func CreateApp(w http.ResponseWriter, r *http.Request) {
+	session, err := auth.ParseSessionFromRequest(r)
+
+	if !session.Permessions.Can(auth.APP, auth.CREATE) {
+		auth.UnAuthResponse(w)
+		return
+	}
 
 	body := CreateAppStruct{}
-	err := json.NewDecoder(r.Body).Decode(&body)
+	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		apperrors.WriteError(w, &apperrors.AppError{
 			Code:       ERROR_CREATE_APP_INVALID_BODY,

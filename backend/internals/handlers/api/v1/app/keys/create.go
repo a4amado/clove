@@ -2,7 +2,7 @@ package AppKeysHandlersV1
 
 import (
 	"clove/internals/apperrors"
-	"clove/internals/auth/apiguard"
+	"clove/internals/auth"
 	"clove/internals/services"
 	appservice "clove/internals/services/apps"
 	"encoding/json"
@@ -29,6 +29,18 @@ type CreateAppApiTokenBody struct {
 }
 
 func CreateAppApiKey(w http.ResponseWriter, r *http.Request) {
+
+	session, err := auth.ParseSessionFromRequest(r)
+	if err != nil {
+		auth.UnAuthResponse(w)
+		return
+	}
+
+	if !session.Permessions.Can(auth.KEY, auth.CREATE) {
+		auth.UnAuthResponse(w)
+		return
+	}
+
 	apId, err := uuid.Parse(r.PathValue("app_id"))
 	if err != nil {
 		apperrors.WriteError(w, &apperrors.AppError{
@@ -54,7 +66,7 @@ func CreateAppApiKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	randomKey, err := apiguard.RandomSecretKey()
+	token, err := auth.GenerateSDKToken(apId)
 	if err != nil {
 		apperrors.WriteError(w, &apperrors.AppError{
 			Code:       ERROR_CREATE_APP_API_KEY_FAILED_GENERATE_KEY,
@@ -65,12 +77,12 @@ func CreateAppApiKey(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-
 	srvs, tx, err := services.New(r.Context()).WithCache().WithTx()
 	key, err := srvs.Apps.Keys.Create(appservice.CreateKeyParams{
-		AppID:     apId,
-		KeyString: randomKey,
-		KeyName:   body.Name,
+		AppID:   apId,
+		KeyName: body.Name,
+		Prefix:  token[:min(5, len(token)-1)],
+		Suffix:  token[max(0, len(token)-5):],
 	})
 	if err != nil {
 		apperrors.WriteError(w, &apperrors.AppError{

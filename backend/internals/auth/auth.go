@@ -1,72 +1,52 @@
 package auth
 
 import (
-	"clove/internals/auth/apiguard"
-	"clove/internals/auth/tokenguard"
-	"context"
+	"errors"
 	"net/http"
-	"time"
-
-	"github.com/dineshgowda24/browser"
 )
 
-type AuthMethod string
-
-const api_key_header_name = "token"
-const session_cookies_name = "session"
+type SessionType string
 
 const (
-	COOKIE   AuthMethod = "cookie"
-	KEY      AuthMethod = "key"
-	Unknowen AuthMethod = "Unknowen"
+	OOT            SessionType = "OOT"
+	SDKToken       SessionType = "SDK_TOKEN"
+	RegualrSession SessionType = "REGULAR_SESSION"
 )
 
-type AuthManager struct {
-	authMethod AuthMethod
-	r          *http.Request
+type Session struct {
+	Permissions PermissionsBuilder
+	SessionType SessionType
 }
 
-func (a *AuthManager) IsLoggedIn() bool {
-	return a.authMethod != Unknowen
+func UnAuthResponse(w http.ResponseWriter) {
+	w.WriteHeader(http.StatusUnauthorized)
 }
+func ParseSession(r *http.Request) (*Session, error) {
 
-func AuthMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		session, err := ParseAuthFromRequest(r)
-		if err != nil {
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
+	OOTSession, _ := ParseOneTimeTokenFromRequest(r)
 
-		new_ctx := context.WithValue(r.Context(), "session", session)
-		r.WithContext(new_ctx)
-		next.ServeHTTP(w, r)
-	})
-}
-
-func ParseAuthFromRequest(r *http.Request) (*tokenguard.SessionTokenClaim, error) {
-	d, err := browser.NewBrowser(r.UserAgent())
-	if err != nil {
-		new_ctx := context.WithValue(r.Context(), "session", nil)
-		r.WithContext(new_ctx)
+	if OOTSession != nil {
+		return &Session{
+			Permissions: OOTSession.Permessions,
+			SessionType: OOT,
+		}, nil
 	}
 
-	if d.IsBrowserKnown() {
-		cookie, err := r.Cookie(session_cookies_name)
-		if err != nil {
-			new_ctx := context.WithValue(r.Context(), "session", nil)
-			r.WithContext(new_ctx)
-		}
-		if cookie.Expires.After(time.Now()) {
-			new_ctx := context.WithValue(r.Context(), "session", nil)
-			r.WithContext(new_ctx)
-		}
-		content := cookie.Value
-		return tokenguard.ValidateSessionToken(content)
-
-	} else {
-		content := apiguard.GetHeaderApi(r)
-		return tokenguard.ValidateSessionToken(content)
-
+	SDKSession, _ := ParseSDKTokenFromRequest(r)
+	if SDKSession != nil {
+		return &Session{
+			Permissions: SDKSession.Permessions,
+			SessionType: SDKToken,
+		}, nil
 	}
+
+	s, _ := ParseSessionFromRequest(r)
+	if s != nil {
+		return &Session{
+			Permissions: s.Permessions,
+			SessionType: RegualrSession,
+		}, nil
+	}
+
+	return nil, errors.New("unauthrized")
 }

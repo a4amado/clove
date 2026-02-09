@@ -12,7 +12,7 @@ import (
 )
 
 const app_Key_List = `-- name: App_Key_List :many
-SELECT id, app_id, created_at, updated_at, key, name from "app_api_key"
+SELECT id, app_id, created_at, updated_at, name, prefix, suffix, expires_at from "app_api_key"
 WHERE   "app_id" = $1
 Limit 20
 OFFSET 10 *  $2::int
@@ -37,8 +37,10 @@ func (q *Queries) App_Key_List(ctx context.Context, arg App_Key_ListParams) ([]A
 			&i.AppID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.Key,
 			&i.Name,
+			&i.Prefix,
+			&i.Suffix,
+			&i.ExpiresAt,
 		); err != nil {
 			return nil, err
 		}
