@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"clove/internals/auth"
 	AppHandlersV1 "clove/internals/handlers/api/v1/app"
 	AppKeysHandlersV1 "clove/internals/handlers/api/v1/app/keys"
 	AppRegionsHandlersV1 "clove/internals/handlers/api/v1/app/regions"
@@ -21,6 +22,7 @@ func V1Routes() chi.Router {
 	})
 
 	r.Route("/apps", func(r chi.Router) {
+		r.Use(auth.AuthMiddleware)
 		r.Route("/{app_id}/", func(r chi.Router) {
 			r.Get("/ws/", AppHandlersV1.UserConnect) // this will use one tiem token, should i Hanle it in Auth Middlware and use the create another middle ware to enfore tir for each route, and what is the most maintanable way ?
 			r.Post("/entry/", AppHandlersV1.WSMessageEntry)
