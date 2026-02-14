@@ -1,15 +1,25 @@
 package Api
 
 import (
-	ApiV1 "clove/internals/handlers/api/v1"
+	"clove/internals/handlers/api/httpctx"
+	v1 "clove/internals/handlers/api/v1"
 
-	"github.com/go-chi/chi/v5"
+	"github.com/swaggest/openapi-go/openapi31"
+	"github.com/swaggest/rest/web"
+	swgui "github.com/swaggest/swgui/v5cdn"
 )
 
-// Routes constructs a chi.Router and mounts the API v1 routes at the "/v1" path.
-// The returned router is ready to be used as the top-level handler for the API.
-func Routes() chi.Router {
-	route := chi.NewRouter()
-	route.Mount("/v1", ApiV1.V1Routes())
-	return route
+// NewService creates a web.Service with OpenAPI 3.1 documentation and mounts
+// all API v1 routes.
+func NewService() *web.Service {
+	service := web.NewService(openapi31.NewReflector())
+	service.OpenAPISchema().SetTitle("Clove API")
+	service.OpenAPISchema().SetVersion("v1.0.0")
+
+	service.Use(httpctx.Middleware)
+
+	v1.V1Routes(service)
+
+	service.Docs("/docs", swgui.New)
+	return service
 }

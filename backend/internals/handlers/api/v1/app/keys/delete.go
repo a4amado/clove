@@ -3,85 +3,60 @@ package AppKeysHandlersV1
 import (
 	"clove/internals/apperrors"
 	"clove/internals/auth"
+	"clove/internals/handlers/api/httpctx"
 	"clove/internals/services"
 	appservice "clove/internals/services/apps"
+	"context"
 	"net/http"
 
 	"github.com/google/uuid"
+	"github.com/swaggest/usecase"
 )
 
-const (
-	ERROR_DELETE_APP_API_KEY_INVALID_APP_ID = "ERROR_DELETE_APP_API_KEY_INVALID_APP_ID"
-	ERROR_DELETE_APP_API_KEY_INVALID_KEY_ID = "ERROR_DELETE_APP_API_KEY_INVALID_KEY_ID"
-	ERROR_DELETE_APP_FAILED_START_TX        = "ERROR_DELETE_APP_FAILED_START_TX"
-	ERROR_DELETE_APP_FAILED_DELETE_APP      = "ERROR_DELETE_APP_FAILED_DELETE_APP"
-	ERROR_DELETE_APP_FAILED_COMMIT          = "ERROR_DELETE_APP_FAILED_COMMIT"
-)
+type DeleteKeyInput struct {
+	AppID uuid.UUID `path:"app_id"`
+	KeyID uuid.UUID `path:"key_id"`
+}
 
-func DeleteAppApiKey(w http.ResponseWriter, r *http.Request) {
-	session, err := auth.ParseSessionFromRequest(r)
-	if err != nil {
-		auth.UnAuthResponse(w)
-		return
-	}
-	if !session.Permessions.Can(auth.KEY, auth.DESTROY) {
-		auth.UnAuthResponse(w)
-		return
-	}
-	apId, err := uuid.Parse(r.PathValue("app_id"))
-	if err != nil {
-		apperrors.WriteError(w, &apperrors.AppError{
-			ID:         uuid.New(),
-			Code:       ERROR_DELETE_APP_API_KEY_INVALID_APP_ID,
-			Message:    "",
-			StatusCode: http.StatusBadRequest,
-		})
-		return
-	}
-	AppApiKey, err := uuid.Parse(r.PathValue("key_id"))
-	if err != nil {
-		apperrors.WriteError(w, &apperrors.AppError{
-			ID:         uuid.New(),
-			Code:       ERROR_DELETE_APP_API_KEY_INVALID_KEY_ID,
-			Message:    "",
-			StatusCode: http.StatusBadRequest,
-		})
-		return
-	}
+type DeleteKeyOutput struct{}
 
-	srvs, tx, err := services.New(r.Context()).WithCache().WithTx()
-	if err != nil {
-		apperrors.WriteError(w, &apperrors.AppError{
-			ID:         uuid.New(),
-			Code:       ERROR_DELETE_APP_FAILED_START_TX,
-			Message:    "",
-			StatusCode: http.StatusBadRequest,
+func DeleteAppApiKey() usecase.Interactor {
+	u := usecase.NewInteractor(func(ctx context.Context, input DeleteKeyInput, output *DeleteKeyOutput) error {
+		r := httpctx.Request(ctx)
+		session, err := auth.ParseSessionFromRequest(r)
+		if err != nil || !session.Permessions.Can(auth.KEY, auth.DESTROY) {
+			return &apperrors.AppError{
+				StatusCode: http.StatusUnauthorized,
+				Code:       "UNAUTHORIZED",
+			}
+		}
+
+		srvs, tx, err := services.New(ctx).WithCache().WithTx()
+		if err != nil {
+			return &apperrors.AppError{
+				StatusCode: http.StatusInternalServerError,
+			}
+		}
+		err = srvs.Apps.Keys.Delete(appservice.DeleteKeyParams{
+			AppID: input.AppID,
+			KeyID: input.KeyID,
 		})
-		return
-	}
-	err = srvs.Apps.Keys.Delete(appservice.DeleteKeyParams{
-		AppID: apId,
-		KeyID: AppApiKey,
+		if err != nil {
+			tx.Rollback(ctx)
+			return &apperrors.AppError{
+				StatusCode: http.StatusBadRequest,
+			}
+		}
+
+		if err = tx.Commit(ctx); err != nil {
+			return &apperrors.AppError{
+				StatusCode: http.StatusInternalServerError,
+			}
+		}
+
+		return nil
 	})
-
-	if err != nil {
-		apperrors.WriteError(w, &apperrors.AppError{
-			ID:         uuid.New(),
-			Code:       ERROR_DELETE_APP_FAILED_DELETE_APP,
-			Message:    "",
-			StatusCode: http.StatusBadRequest,
-		})
-		tx.Rollback(r.Context())
-		return
-	}
-	err = tx.Commit(r.Context())
-	if err != nil {
-		apperrors.WriteError(w, &apperrors.AppError{
-			ID:         uuid.New(),
-			Code:       ERROR_DELETE_APP_FAILED_COMMIT,
-			Message:    "",
-			StatusCode: http.StatusBadRequest,
-		})
-	}
-
+	u.SetTitle("Delete API Key")
+	u.SetTags("Keys")
+	return u
 }

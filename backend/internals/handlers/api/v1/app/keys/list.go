@@ -3,68 +3,52 @@ package AppKeysHandlersV1
 import (
 	"clove/internals/apperrors"
 	"clove/internals/auth"
+	"clove/internals/handlers/api/httpctx"
 	"clove/internals/services"
 	appservice "clove/internals/services/apps"
-	"encoding/json"
+	repository "clove/internals/services/generatedRepo"
+	"context"
 	"net/http"
-	"strconv"
 
 	"github.com/google/uuid"
+	"github.com/swaggest/usecase"
 )
 
-const (
-	ERROR_LIST_APP_KEYS_INVALID_ID            = "ERROR_LIST_APP_KEYS_INVALID_ID"
-	ERROR_LIST_APP_KEYS_PAGE_IDX_NOT_A_NUMBER = "ERROR_LIST_APP_KEYS_PAGE_IDX_NOT_A_NUMBER"
-)
+type ListKeysInput struct {
+	AppID   uuid.UUID `path:"app_id"`
+	PageIdx int64     `query:"page_idx"`
+}
 
-func ListAppApiKeys(w http.ResponseWriter, r *http.Request) {
-	session, err := auth.ParseSessionFromRequest(r)
-	if err != nil {
-		auth.UnAuthResponse(w)
-		return
-	}
-	if !session.Permessions.Can(auth.KEY, auth.READ) {
-		auth.UnAuthResponse(w)
-		return
-	}
-	appId, err := uuid.Parse(r.PathValue("app_id"))
+type ListKeysOutput struct {
+	Keys []repository.AppApiKey `json:"keys"`
+}
 
-	if err != nil || appId == uuid.Nil {
-		apperrors.WriteError(w, &apperrors.AppError{
-			ID:         uuid.New(),
-			Code:       ERROR_LIST_APP_KEYS_INVALID_ID,
-			Message:    "",
-			StatusCode: http.StatusBadRequest,
+func ListAppApiKeys() usecase.Interactor {
+	u := usecase.NewInteractor(func(ctx context.Context, input ListKeysInput, output *ListKeysOutput) error {
+		r := httpctx.Request(ctx)
+		session, err := auth.ParseSessionFromRequest(r)
+		if err != nil || !session.Permessions.Can(auth.KEY, auth.READ) {
+			return &apperrors.AppError{
+				StatusCode: http.StatusUnauthorized,
+				Code:       "UNAUTHORIZED",
+			}
+		}
+
+		srvs := services.New(ctx).WithCache()
+		keys, err := srvs.Apps.Keys.List(appservice.ListKeysParams{
+			AppId: input.AppID,
+			Page:  int32(input.PageIdx),
 		})
-		return
-	}
-	pageIdxStr := r.URL.Query().Get("page_idx")
-	if pageIdxStr == "" {
-		pageIdxStr = "0"
-	}
-	page_idx, err := strconv.ParseInt(pageIdxStr, 10, 64)
-	if err != nil {
-		apperrors.WriteError(w, &apperrors.AppError{
-			ID:         uuid.New(),
-			Code:       ERROR_LIST_APP_KEYS_PAGE_IDX_NOT_A_NUMBER,
-			Message:    "",
-			StatusCode: http.StatusBadRequest,
-		})
-		return
-	}
-	srvs := services.New(r.Context()).WithCache()
+		if err != nil {
+			return &apperrors.AppError{
+				StatusCode: http.StatusInternalServerError,
+			}
+		}
 
-	keys, err := srvs.Apps.Keys.List(appservice.ListKeysParams{
-		AppId: appId,
-		Page:  int32(page_idx),
+		output.Keys = keys
+		return nil
 	})
-
-	if err != nil {
-		http.Error(w, "Insternal server error", http.StatusInternalServerError)
-		return
-	}
-	err = json.NewEncoder(w).Encode(keys)
-	if err != nil {
-		http.Error(w, "", http.StatusInternalServerError)
-	}
+	u.SetTitle("List API Keys")
+	u.SetTags("Keys")
+	return u
 }

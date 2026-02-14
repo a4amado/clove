@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go test:*)",
+      "Bash(wc:*)",
+      "Bash(grep:*)",
+      "Bash(ls:*)",
+      "Bash(npm create:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx vite build:*)",
+      "Bash(./node_modules/.bin/vite build:*)",
+      "Bash(node:*)",
+      "WebSearch",
+      "Bash(npm run build:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(go get:*)",
+      "Bash(go env:*)",
+      "Bash(go build:*)",
+      "Bash(go vet:*)"
+    ]
+  }
+}

@@ -3,59 +3,50 @@ package AppRegionsHandlersV1
 import (
 	"clove/internals/apperrors"
 	"clove/internals/auth"
+	"clove/internals/handlers/api/httpctx"
 	"clove/internals/services"
 	appservice "clove/internals/services/apps"
-	"encoding/json"
+	repository "clove/internals/services/generatedRepo"
+	"context"
 	"net/http"
 
 	"github.com/google/uuid"
+	"github.com/swaggest/usecase"
 )
 
-const (
-	ERROR_LIST_APP_REGIONS_INVALID_APP_ID  = "ERROR_LIST_APP_REGIONS_INVALID_APP_ID"
-	ERROR_LIST_APP_REGIONS_FAILED_DB_QUERY = "ERROR_LIST_APP_REGIONS_FAILED_DB_QUERY"
-)
+type ListRegionsInput struct {
+	AppID uuid.UUID `path:"app_id"`
+}
 
-func ListAppRegions(w http.ResponseWriter, r *http.Request) {
-	session, err := auth.ParseSessionFromRequest(r)
-	if err != nil {
-		auth.UnAuthResponse(w)
-		return
-	}
-	if !session.Permessions.Can(auth.KEY, auth.READ) {
-		auth.UnAuthResponse(w)
-		return
-	}
-	appId, err := uuid.Parse(r.PathValue("app_id"))
-	if err != nil {
-		apperrors.WriteError(w, &apperrors.AppError{
-			ID:         uuid.New(),
-			Code:       ERROR_LIST_APP_REGIONS_INVALID_APP_ID,
-			Message:    "",
-			StatusCode: http.StatusBadRequest,
+type ListRegionsOutput struct {
+	Regions []repository.Region `json:"regions"`
+}
+
+func ListAppRegions() usecase.Interactor {
+	u := usecase.NewInteractor(func(ctx context.Context, input ListRegionsInput, output *ListRegionsOutput) error {
+		r := httpctx.Request(ctx)
+		session, err := auth.ParseSessionFromRequest(r)
+		if err != nil || !session.Permessions.Can(auth.KEY, auth.READ) {
+			return &apperrors.AppError{
+				StatusCode: http.StatusUnauthorized,
+				Code:       "UNAUTHORIZED",
+			}
+		}
+
+		appsrvs := services.New(ctx)
+		regions, err := appsrvs.Apps.Regions.List(appservice.GetAppRegions{
+			AppID: input.AppID,
 		})
-		return
-	}
-	appSrvs := services.New(r.Context())
-	regions, err := appSrvs.Apps.Regions.List(appservice.GetAppRegions{
-		AppID: appId,
+		if err != nil {
+			return &apperrors.AppError{
+				StatusCode: http.StatusInternalServerError,
+			}
+		}
+
+		output.Regions = regions
+		return nil
 	})
-	if err != nil {
-		apperrors.WriteError(w, &apperrors.AppError{
-			ID:         uuid.New(),
-			Code:       ERROR_LIST_APP_REGIONS_FAILED_DB_QUERY,
-			Message:    "",
-			StatusCode: http.StatusBadRequest,
-		})
-		return
-	}
-	if err := json.NewEncoder(w).Encode(regions); err != nil {
-		apperrors.WriteError(nil, &apperrors.AppError{
-			ID:         uuid.New(),
-			Code:       ERROR_LIST_APP_REGIONS_FAILED_DB_QUERY,
-			Message:    "",
-			StatusCode: http.StatusBadRequest,
-		})
-		return
-	}
+	u.SetTitle("List App Regions")
+	u.SetTags("Regions")
+	return u
 }

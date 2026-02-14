@@ -3,23 +3,29 @@ package AuthHandlersV1
 import (
 	"clove/internals/apperrors"
 	"clove/internals/auth"
-
+	"clove/internals/handlers/api/httpctx"
 	"clove/internals/services"
 	userservice "clove/internals/services/user"
-	"encoding/json"
+	"context"
 	"errors"
 	"net/http"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/swaggest/usecase"
+
+	repository "clove/internals/services/generatedRepo"
 )
 
-type User_Signup_Body struct {
+type SignupInput struct {
 	Email           string `json:"email"`
 	Password        string `json:"password"`
 	ConfirmPassword string `json:"confirm_password"`
+}
+
+type SignupOutput struct {
+	repository.User
 }
 
 const (
@@ -27,74 +33,58 @@ const (
 	ERROR_USER_EMAIL_ALREADY_EXISTS = "ERROR_USER_EMAIL_ALREADY_EXISTS"
 )
 
-func User_Signup(w http.ResponseWriter, r *http.Request) {
-	req_id := uuid.New()
-
-	body := User_Signup_Body{}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-
-		apperrors.WriteError(w, &apperrors.AppError{
-			Code:       ERROR_USER_SIGNUP_BAD_BODY,
-			Message:    "",
-			StatusCode: http.StatusBadRequest,
-			ID:         req_id,
+func Signup() usecase.Interactor {
+	u := usecase.NewInteractor(func(ctx context.Context, input SignupInput, output *SignupOutput) error {
+		srvs, tx, err := services.New(ctx).WithTx()
+		if err != nil {
+			return &apperrors.AppError{
+				StatusCode: http.StatusInternalServerError,
+			}
+		}
+		code, _ := auth.GenRandKey(10)
+		user, err := srvs.Users.Insert(userservice.InsertUserParams{
+			Email:           input.Email,
+			Password:        input.Password,
+			EmailVerifycode: code,
 		})
-		return
-	}
+		if err != nil {
+			var pgErr *pgconn.PgError
+			tx.Rollback(ctx)
 
-	srvs, tx, err := services.New(r.Context()).WithTx()
-	if err != nil {
+			if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
+				return &apperrors.AppError{
+					Code:       ERROR_USER_EMAIL_ALREADY_EXISTS,
+					Message:    "An account with this email already exists",
+					StatusCode: http.StatusConflict,
+				}
+			}
 
-		apperrors.WriteError(w, &apperrors.AppError{
-			StatusCode: http.StatusInternalServerError,
-			ID:         req_id,
-		})
-		return
-	}
-	code, _ := auth.GenRandKey(10)
-	user, err := srvs.Users.Insert(userservice.InsertUserParams{
-		Email:           body.Email,
-		Password:        body.Password,
-		EmailVerifycode: code,
-	})
-	if err != nil {
-		var pgErr *pgconn.PgError
-		tx.Rollback(r.Context())
-
-		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
-
-			apperrors.WriteError(w, &apperrors.AppError{
-				Code:       ERROR_USER_EMAIL_ALREADY_EXISTS,
-				Message:    "An account with this email already exists",
-				StatusCode: http.StatusConflict,
-			})
-			return
+			return &apperrors.AppError{
+				StatusCode: http.StatusInternalServerError,
+			}
 		}
 
-		apperrors.WriteError(w, &apperrors.AppError{
-			Message:    "",
-			StatusCode: http.StatusInternalServerError,
-		})
-		return
-	}
+		if err = tx.Commit(ctx); err != nil {
+			return &apperrors.AppError{
+				StatusCode: http.StatusInternalServerError,
+			}
+		}
 
-	err = tx.Commit(r.Context())
-	if err != nil {
+		sessionToken, _ := auth.GenerateSessionToken(*user)
+		if r := httpctx.Request(ctx); r != nil {
+			http.SetCookie(httpctx.ResponseWriter(ctx), &http.Cookie{
+				Name:     "token",
+				Value:    sessionToken,
+				Expires:  time.Now().Add(time.Hour * 24 * 7),
+				HttpOnly: true,
+				SameSite: http.SameSiteDefaultMode,
+			})
+		}
 
-		apperrors.WriteError(w, &apperrors.AppError{
-			Message:    "",
-			StatusCode: http.StatusInternalServerError,
-		})
-		return
-	}
-
-	session_token, _ := auth.GenerateSessionToken(*user)
-	r.AddCookie(&http.Cookie{
-		Name:     "token",
-		Value:    session_token,
-		Expires:  time.Now().Add(time.Hour * 24 * 7),
-		HttpOnly: true,
-		SameSite: http.SameSiteDefaultMode,
+		output.User = *user
+		return nil
 	})
-	_ = json.NewEncoder(w).Encode(user)
+	u.SetTitle("User Signup")
+	u.SetTags("Auth")
+	return u
 }

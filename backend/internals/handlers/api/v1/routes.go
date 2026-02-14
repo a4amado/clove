@@ -7,42 +7,31 @@ import (
 	AppRegionsHandlersV1 "clove/internals/handlers/api/v1/app/regions"
 	AppTokensHandlersV1 "clove/internals/handlers/api/v1/app/tokens"
 	AuthHandlersV1 "clove/internals/handlers/api/v1/auth"
+	"net/http"
 
-	"github.com/go-chi/chi/v5"
+	"github.com/swaggest/rest/web"
 )
 
-// V1Routes creates a chi.Router configured with the v1 API subroutes.
-// The returned router mounts the v1 auth, user, and app handlers at /auth, /user, and /app respectively.
-func V1Routes() chi.Router {
-	r := chi.NewRouter()
+// V1Routes registers all v1 API routes on the given web.Service.
+func V1Routes(service *web.Service) {
 
-	r.Route("/auth", func(r chi.Router) {
-		r.Post("/sign-up", AuthHandlersV1.User_Signup)
-		r.Post("/sign-in", AuthHandlersV1.SignIn)
-	})
+	// Auth routes (public)
+	service.Post("/v1/auth/sign-up", AuthHandlersV1.Signup())
+	service.Post("/v1/auth/sign-in", AuthHandlersV1.SignIn())
+	service.Get("/v1/auth/me", AuthHandlersV1.Me())
 
-	r.Route("/apps", func(r chi.Router) {
-		r.Use(auth.AuthMiddleware)
-		r.Route("/{app_id}/", func(r chi.Router) {
-			r.Get("/ws/", AppHandlersV1.UserConnect) // this will use one tiem token, should i Hanle it in Auth Middlware and use the create another middle ware to enfore tir for each route, and what is the most maintanable way ?
-			r.Post("/entry/", AppHandlersV1.WSMessageEntry)
-			r.Route("/keys/", func(r chi.Router) {
-				r.Get("/", AppKeysHandlersV1.ListAppApiKeys)
-				r.Post("/", AppKeysHandlersV1.CreateAppApiKey)
-				r.Route("/{key_id}/", func(r chi.Router) {
-					r.Delete("/", AppKeysHandlersV1.DeleteAppApiKey)
-				})
-			})
-			r.Route("/tokens/", func(r chi.Router) {
-				r.Post("/", AppTokensHandlersV1.CreateAppOneTimeToken)
-			})
-			r.Route("/regions/", func(r chi.Router) {
-				r.Get("/", AppRegionsHandlersV1.ListAppRegions)
-				r.Patch("/", AppRegionsHandlersV1.UpdateAppRegions)
-			})
-		})
+	// App management (usecase-based, handlers check auth internally)
+	service.Post("/v1/apps", AppHandlersV1.CreateApp())
+	service.Get("/v1/apps/{app_id}/keys", AppKeysHandlersV1.ListAppApiKeys())
+	service.Post("/v1/apps/{app_id}/keys", AppKeysHandlersV1.CreateAppApiKey())
+	service.Delete("/v1/apps/{app_id}/keys/{key_id}", AppKeysHandlersV1.DeleteAppApiKey())
+	service.Post("/v1/apps/{app_id}/tokens", AppTokensHandlersV1.CreateAppOneTimeToken())
+	service.Get("/v1/apps/{app_id}/regions", AppRegionsHandlersV1.ListAppRegions())
+	service.Patch("/v1/apps/{app_id}/regions", AppRegionsHandlersV1.UpdateAppRegions())
 
-	})
-
-	return r
+	// Raw handlers (WebSocket + raw-body entry) — kept as http.HandlerFunc
+	service.Method(http.MethodGet, "/v1/apps/{app_id}/ws",
+		auth.AuthMiddleware(http.HandlerFunc(AppHandlersV1.UserConnect)))
+	service.Method(http.MethodPost, "/v1/apps/{app_id}/entry",
+		auth.AuthMiddleware(http.HandlerFunc(AppHandlersV1.WSMessageEntry)))
 }

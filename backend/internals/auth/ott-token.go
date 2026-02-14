@@ -36,7 +36,7 @@ func GenerateOneTimeToken(app repository.App, channelID string) (string, error) 
 		ChannelID: channelID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   "Clove One-Time Token",
-			Issuer:    fmt.Sprintf("%v:%s", envConsts.Region()),
+			Issuer:    fmt.Sprintf("%v:%s", envConsts.Region(), "ott"),
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute)),
 			NotBefore: jwt.NewNumericDate(time.Now()),
 		},

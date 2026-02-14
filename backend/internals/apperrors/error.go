@@ -13,9 +13,21 @@ import (
 // AppError represents a structured application error
 type AppError struct {
 	ID         uuid.UUID `json:"request_id"`
+	Type       string    `json:"type"`
 	Code       string    `json:"code"`
 	Message    string    `json:"message"`
 	StatusCode int       `json:"status_code"`
+}
+
+func (e *AppError) Error() string {
+	if e.Message != "" {
+		return e.Message
+	}
+	return e.Code
+}
+
+func (e *AppError) HTTPStatus() int {
+	return e.StatusCode
 }
 
 // WriteError writes an error response to http.ResponseWriter
