@@ -2,7 +2,8 @@ package AppHandlersV1
 
 import (
 	"clove/internals/apperrors"
-	"clove/internals/auth"
+	"clove/internals/middleware"
+	postgresPool "clove/internals/data/postgres/pool"
 	"clove/internals/handlers/api/httpctx"
 	"clove/internals/services"
 	repository "clove/internals/services/generatedRepo"
@@ -41,8 +42,8 @@ func CreateApp() usecase.Interactor {
 
 	u := usecase.NewInteractor(func(ctx context.Context, input CreateAppInput, output *CreateAppOutput) error {
 		r := httpctx.Request(ctx)
-		session, err := auth.ParseSessionFromRequest(r)
-		if err != nil || !session.Permessions.Can(auth.APP, auth.CREATE) {
+		session, err := middleware.ParseSession(r, postgresPool.Client())
+		if err != nil || !session.Permissions.Can(middleware.APP, middleware.CREATE) {
 			return &apperrors.AppError{
 				StatusCode: http.StatusUnauthorized,
 				Code:       "UNAUTHORIZED",

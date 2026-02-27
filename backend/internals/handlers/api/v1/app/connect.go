@@ -2,8 +2,7 @@ package AppHandlersV1
 
 import (
 	"clove/internals/apperrors"
-	"clove/internals/auth"
-
+	"clove/internals/middleware"
 	"clove/internals/heartbeat/dogpile"
 	"clove/internals/meridian"
 	"clove/internals/meridian/fanout"
@@ -36,9 +35,6 @@ const (
 
 var dogpileInstance = dogpile.New()
 
-// newUpgrader creates a websocket.Upgrader configured with buffer sizes based on the app's type and an origin check using the app's AllowedOrigins.
-// The upgrader's CheckOrigin lowercases the request Origin header and allows the request only if it matches an entry in app.AllowedOrigins, which must be pre-normalized to lowercase.
-
 type MessageToClient struct {
 	Channel string `json:"channel"`
 	Payload []byte `json:"payload"`
@@ -51,14 +47,9 @@ func (m *MessageToClient) Binary() ([]byte, error) {
 // UserConnect upgrades the incoming HTTP request to a WebSocket for the specified app
 // and subscribes the resulting connection to the requested channel(s).
 func UserConnect(w http.ResponseWriter, r *http.Request) {
-
-	session, err := auth.ParseSessionFromRequest(r)
-	if err != nil {
-		auth.UnAuthResponse(w)
-		return
-	}
-	if !session.Permessions.Can(auth.DELIVERY, auth.READ) {
-		auth.UnAuthResponse(w)
+	session, ok := middleware.SessionFromContext(r.Context())
+	if !ok || !session.Permissions.Can(middleware.DELIVERY, middleware.READ) {
+		middleware.UnAuthResponse(w)
 		return
 	}
 
@@ -66,63 +57,42 @@ func UserConnect(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	wsUpgrader := websocket.Upgrader{}
 	conn, err := wsUpgrader.Upgrade(w, r, nil)
-
 	if err != nil {
 		apperrors.WriteWsError(conn, &lock, &apperrors.AppError{
-			ID: uuid.New(),
-
+			ID:         uuid.New(),
 			Code:       ERROR_USER_CONNECT_WEBSOCKET_UPGRADE,
-			Message:    "",
 			StatusCode: http.StatusInternalServerError,
 		})
 		return
 	}
-
-	claims, err := auth.ParseOneTimeTokenFromRequest(r)
-	if err != nil {
-		apperrors.WriteWsError(conn, &lock, &apperrors.AppError{
-			Code:       ERROR_USER_CONNECT_INVALID_TOKEN,
-			Message:    "",
-			StatusCode: http.StatusUnauthorized,
-
-			ID: uuid.New(),
-		})
-		return
-	}
 	defer conn.Close()
+
 	appUUID, err := uuid.Parse(r.PathValue("app_id"))
 	if err != nil {
 		apperrors.WriteWsError(conn, &lock, &apperrors.AppError{
 			Code:       ERROR_USER_CONNECT_INVALID_APP_ID,
-			Message:    "",
 			StatusCode: http.StatusBadRequest,
-
-			ID: uuid.New(),
+			ID:         uuid.New(),
 		})
 		return
 	}
 
-	if claims.App.ID.String() != appUUID.String() {
+	if session.AppID.Bytes != appUUID {
 		apperrors.WriteWsError(conn, &lock, &apperrors.AppError{
 			Code:       ERROR_USER_CONNECT_TOKEN_APP_MISMATCH,
-			Message:    "",
 			StatusCode: http.StatusForbidden,
-
-			ID: uuid.New(),
+			ID:         uuid.New(),
 		})
 		return
 	}
+
 	srvs := services.New(r.Context())
-	_, err = srvs.Apps.Get(appservice.GetParams{
-		AppID: appUUID,
-	})
+	_, err = srvs.Apps.Get(appservice.GetParams{AppID: appUUID})
 	if err != nil {
 		apperrors.WriteWsError(conn, &lock, &apperrors.AppError{
 			Code:       ERROR_USER_CONNECT_APP_NOT_FOUND,
-			Message:    "",
 			StatusCode: http.StatusForbidden,
-
-			ID: uuid.New(),
+			ID:         uuid.New(),
 		})
 		return
 	}
@@ -130,7 +100,7 @@ func UserConnect(w http.ResponseWriter, r *http.Request) {
 	fanoutClient := meridian.Client().Fanout()
 	channelKey := fanoutClient.FormatChannelKey(fanout.ChannelKey{
 		AppID:     appUUID,
-		ChannelID: claims.ChannelID,
+		ChannelID: session.ChannelID,
 	})
 
 	pubsub := fanout.Fanout().Subscribe(ctx, channelKey)
@@ -143,17 +113,14 @@ func UserConnect(w http.ResponseWriter, r *http.Request) {
 	dogpileInstance.Increase()
 	defer dogpileInstance.Decrease()
 
-	// Context that cancels when connection dies
 	connCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	var wg sync.WaitGroup
 	writeLock := sync.Mutex{}
 
-	// Reader goroutine (processes messages from Valkey)
 	wg.Go(func() {
-		defer cancel() // Cancel on exit
-
+		defer cancel()
 		for {
 			select {
 			case msg, ok := <-messageChannel:
@@ -171,12 +138,10 @@ func UserConnect(w http.ResponseWriter, r *http.Request) {
 		}
 	})
 
-	// Writer goroutine (writes to WebSocket)
 	wg.Add(1)
 	wg.Go(func() {
-
 		defer wg.Done()
-		defer cancel() // Cancel on exit
+		defer cancel()
 
 		ticker := time.NewTicker(pingPeriod)
 		defer ticker.Stop()
@@ -200,10 +165,9 @@ func UserConnect(w http.ResponseWriter, r *http.Request) {
 		}
 	})
 
-	// Read pump (handles pongs and close messages)
 	wg.Add(1)
 	wg.Go(func() {
-		defer cancel() // Cancel on exit
+		defer cancel()
 
 		conn.SetReadDeadline(time.Now().Add(pongWait))
 		conn.SetPongHandler(func(string) error {

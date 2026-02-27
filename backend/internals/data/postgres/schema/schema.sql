@@ -1,4 +1,5 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE TYPE credential_type AS ENUM ('session', 'sdk', 'ott');
 CREATE TYPE region AS ENUM ('dk1');
 CREATE TYPE app_type AS ENUM ('free', 'standard', 'pro');
 CREATE TYPE user_role AS ENUM ('super', 'admin', 'user');
@@ -61,4 +62,21 @@ CREATE TABLE "app_api_key" (
     CONSTRAINT "api_key_app_fk" FOREIGN KEY ("app_id") REFERENCES "app"("id")
 );
 create INDEX "app_api_key_appId_idx"  on "app_api_key"("app_id");
+
+CREATE TABLE "credential" (
+    "id"          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    "token"       TEXT NOT NULL UNIQUE,
+    "user_id"     UUID,
+    "app_id"      UUID,
+    "channel_id"  TEXT,
+    "type"        credential_type NOT NULL,
+    "permissions" TEXT NOT NULL,
+    "expires_at"  TIMESTAMP NOT NULL,
+    "created_at"  TIMESTAMP DEFAULT NOW(),
+    CONSTRAINT "credential_user_fk"
+        FOREIGN KEY ("user_id") REFERENCES "user"("id") ON DELETE CASCADE,
+    CONSTRAINT "credential_app_fk"
+        FOREIGN KEY ("app_id") REFERENCES "app"("id") ON DELETE CASCADE
+);
+CREATE INDEX credential_token_idx ON "credential"("token");
 

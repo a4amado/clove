@@ -1,24 +1,19 @@
-// Package meridian is the core routing coordination service for Clove.
+// Package meridian handles routing of user-generated events across Clove regions.
 //
-// Meridian maintains the global routing registry through a multi-tier storage architecture:
-//   - PostgreSQL: Source of truth for persistent routing state
-//   - Valkey: Local cache for sub-millisecond route lookups
-//   - RabbitMQ: Event stream for global state propagation
+// Meridian uses RabbitMQ exclusively for cross-region delivery of user events.
+// Global routing state (app registry, channel membership) is managed by the
+// Valkey cluster and is not replicated through this package.
 //
 // Architecture:
 //
-//	Producer: Publishes local routing changes to RabbitMQ for global replication
-//	Consumer: Ingests routing updates from RabbitMQ and materializes them in local Valkey
-//	Query Interface: Serves routing lookups from Valkey with PostgreSQL fallback
-//
-// This design ensures eventual consistency across distributed Clove instances while
-// maintaining low-latency access to routing data.
+//	Producer: Publishes user-generated messages to RabbitMQ for cross-region fanout
+//	Consumer: Ingests messages from RabbitMQ and publishes them to local Valkey pub/sub
+//	Fanout:   Valkey pub/sub delivers messages to connected WebSocket clients
 
 package meridian
 
 import (
 	"clove/internals/meridian/fanout"
-	AppReplication "clove/internals/meridian/replication/app-replicatrion"
 	MessageReplication "clove/internals/meridian/replication/message-replication"
 	"sync"
 )
@@ -41,10 +36,6 @@ func Client() *Meridian {
 
 func (mer *Meridian) Fanout() *fanout.FanOut {
 	return fanout.Fanout()
-}
-
-func (mer *Meridian) ReplicateApp() *AppReplication.AppReplication {
-	return AppReplication.ReplicateApp()
 }
 
 func (mer *Meridian) ReplicateMessage() *MessageReplication.MessageReplication {

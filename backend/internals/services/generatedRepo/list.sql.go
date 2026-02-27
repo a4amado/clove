@@ -52,6 +52,39 @@ func (q *Queries) App_Key_List(ctx context.Context, arg App_Key_ListParams) ([]A
 	return items, nil
 }
 
+const app_List_ByUserID = `-- name: App_List_ByUserID :many
+SELECT id, app_slug, region, app_type, user_id, allowed_origins FROM "app"
+WHERE "user_id" = $1
+ORDER BY "app_slug" ASC
+`
+
+func (q *Queries) App_List_ByUserID(ctx context.Context, userID pgtype.UUID) ([]App, error) {
+	rows, err := q.db.Query(ctx, app_List_ByUserID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []App
+	for rows.Next() {
+		var i App
+		if err := rows.Scan(
+			&i.ID,
+			&i.AppSlug,
+			&i.Region,
+			&i.AppType,
+			&i.UserID,
+			&i.AllowedOrigins,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const userEmails_List_ByUserID = `-- name: UserEmails_List_ByUserID :many
 SELECT
     id, email, user_id, created_at, updated_at, verified_at, code

@@ -72,6 +72,67 @@ func AllAppTypeValues() []AppType {
 	}
 }
 
+type CredentialType string
+
+const (
+	CredentialTypeSession CredentialType = "session"
+	CredentialTypeSdk     CredentialType = "sdk"
+	CredentialTypeOtt     CredentialType = "ott"
+)
+
+func (e *CredentialType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = CredentialType(s)
+	case string:
+		*e = CredentialType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for CredentialType: %T", src)
+	}
+	return nil
+}
+
+type NullCredentialType struct {
+	CredentialType CredentialType `json:"credential_type"`
+	Valid          bool           `json:"valid"` // Valid is true if CredentialType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullCredentialType) Scan(value interface{}) error {
+	if value == nil {
+		ns.CredentialType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.CredentialType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullCredentialType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.CredentialType), nil
+}
+
+func (e CredentialType) Valid() bool {
+	switch e {
+	case CredentialTypeSession,
+		CredentialTypeSdk,
+		CredentialTypeOtt:
+		return true
+	}
+	return false
+}
+
+func AllCredentialTypeValues() []CredentialType {
+	return []CredentialType{
+		CredentialTypeSession,
+		CredentialTypeSdk,
+		CredentialTypeOtt,
+	}
+}
+
 type Region string
 
 const (
@@ -206,6 +267,18 @@ type AppApiKey struct {
 	Prefix    pgtype.Text      `json:"prefix"`
 	Suffix    pgtype.Text      `json:"suffix"`
 	ExpiresAt pgtype.Timestamp `json:"expires_at"`
+}
+
+type Credential struct {
+	ID          pgtype.UUID      `json:"id"`
+	Token       string           `json:"token"`
+	UserID      pgtype.UUID      `json:"user_id"`
+	AppID       pgtype.UUID      `json:"app_id"`
+	ChannelID   pgtype.Text      `json:"channel_id"`
+	Type        CredentialType   `json:"type"`
+	Permissions string           `json:"permissions"`
+	ExpiresAt   pgtype.Timestamp `json:"expires_at"`
+	CreatedAt   pgtype.Timestamp `json:"created_at"`
 }
 
 type User struct {

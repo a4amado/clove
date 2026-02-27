@@ -39,6 +39,26 @@ func (q *Queries) App_Key_Delete(ctx context.Context, arg App_Key_DeleteParams) 
 	return result.RowsAffected(), nil
 }
 
+const credential_Delete = `-- name: Credential_Delete :exec
+DELETE FROM "credential"
+WHERE "id" = $1
+`
+
+func (q *Queries) Credential_Delete(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, credential_Delete, id)
+	return err
+}
+
+const credential_DeleteExpired = `-- name: Credential_DeleteExpired :exec
+DELETE FROM "credential"
+WHERE "expires_at" < NOW()
+`
+
+func (q *Queries) Credential_DeleteExpired(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, credential_DeleteExpired)
+	return err
+}
+
 const userEmail_Delete = `-- name: UserEmail_Delete :exec
 DELETE FROM "user_email"
 WHERE "id" = $1

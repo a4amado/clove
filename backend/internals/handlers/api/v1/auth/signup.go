@@ -2,20 +2,21 @@ package AuthHandlersV1
 
 import (
 	"clove/internals/apperrors"
-	"clove/internals/auth"
+	"clove/internals/middleware"
 	"clove/internals/handlers/api/httpctx"
 	"clove/internals/services"
+	credentialservice "clove/internals/services/credential"
+	repository "clove/internals/services/generatedRepo"
 	userservice "clove/internals/services/user"
 	"context"
 	"errors"
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/swaggest/usecase"
-
-	repository "clove/internals/services/generatedRepo"
 )
 
 type SignupInput struct {
@@ -41,16 +42,16 @@ func Signup() usecase.Interactor {
 				StatusCode: http.StatusInternalServerError,
 			}
 		}
-		code, _ := auth.GenRandKey(10)
+
+		code, _ := middleware.GenRandKey(10)
 		user, err := srvs.Users.Insert(userservice.InsertUserParams{
 			Email:           input.Email,
 			Password:        input.Password,
 			EmailVerifycode: code,
 		})
 		if err != nil {
-			var pgErr *pgconn.PgError
 			tx.Rollback(ctx)
-
+			var pgErr *pgconn.PgError
 			if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
 				return &apperrors.AppError{
 					Code:       ERROR_USER_EMAIL_ALREADY_EXISTS,
@@ -58,27 +59,40 @@ func Signup() usecase.Interactor {
 					StatusCode: http.StatusConflict,
 				}
 			}
-
 			return &apperrors.AppError{
 				StatusCode: http.StatusInternalServerError,
 			}
+		}
+
+		token, err := middleware.GenRandKey(32)
+		if err != nil {
+			tx.Rollback(ctx)
+			return &apperrors.AppError{StatusCode: http.StatusInternalServerError}
+		}
+
+		perms := middleware.NewPermissionsBuilder()
+		perms.Allow(middleware.RESOURCES_ALL, middleware.OPERATIONS_ALL)
+		permsStr, _ := perms.String()
+
+		expires := time.Now().Add(time.Hour * 24 * 7)
+		_, err = srvs.Credentials.Create(credentialservice.InsertParams{
+			Token:       token,
+			UserID:      uuid.UUID(user.ID.Bytes),
+			Type:        repository.CredentialTypeSession,
+			Permissions: permsStr,
+			ExpiresAt:   expires,
+		})
+		if err != nil {
+			tx.Rollback(ctx)
+			return &apperrors.AppError{StatusCode: http.StatusInternalServerError}
 		}
 
 		if err = tx.Commit(ctx); err != nil {
-			return &apperrors.AppError{
-				StatusCode: http.StatusInternalServerError,
-			}
+			return &apperrors.AppError{StatusCode: http.StatusInternalServerError}
 		}
 
-		sessionToken, _ := auth.GenerateSessionToken(*user)
-		if r := httpctx.Request(ctx); r != nil {
-			http.SetCookie(httpctx.ResponseWriter(ctx), &http.Cookie{
-				Name:     "token",
-				Value:    sessionToken,
-				Expires:  time.Now().Add(time.Hour * 24 * 7),
-				HttpOnly: true,
-				SameSite: http.SameSiteDefaultMode,
-			})
+		if w := httpctx.ResponseWriter(ctx); w != nil {
+			middleware.SetSessionCookie(w, token, expires)
 		}
 
 		output.User = *user

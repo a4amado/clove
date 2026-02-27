@@ -85,6 +85,47 @@ func (q *Queries) App_Key_Insert(ctx context.Context, arg App_Key_InsertParams) 
 	return i, err
 }
 
+const credential_Insert = `-- name: Credential_Insert :one
+INSERT INTO "credential" ("token", "user_id", "app_id", "channel_id", "type", "permissions", "expires_at")
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id, token, user_id, app_id, channel_id, type, permissions, expires_at, created_at
+`
+
+type Credential_InsertParams struct {
+	Token       string           `json:"token"`
+	UserID      pgtype.UUID      `json:"user_id"`
+	AppID       pgtype.UUID      `json:"app_id"`
+	ChannelID   pgtype.Text      `json:"channel_id"`
+	Type        CredentialType   `json:"type"`
+	Permissions string           `json:"permissions"`
+	ExpiresAt   pgtype.Timestamp `json:"expires_at"`
+}
+
+func (q *Queries) Credential_Insert(ctx context.Context, arg Credential_InsertParams) (Credential, error) {
+	row := q.db.QueryRow(ctx, credential_Insert,
+		arg.Token,
+		arg.UserID,
+		arg.AppID,
+		arg.ChannelID,
+		arg.Type,
+		arg.Permissions,
+		arg.ExpiresAt,
+	)
+	var i Credential
+	err := row.Scan(
+		&i.ID,
+		&i.Token,
+		&i.UserID,
+		&i.AppID,
+		&i.ChannelID,
+		&i.Type,
+		&i.Permissions,
+		&i.ExpiresAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const userEmail_Insert = `-- name: UserEmail_Insert :one
 INSERT INTO "user_email"
 ("email", "user_id", "code")

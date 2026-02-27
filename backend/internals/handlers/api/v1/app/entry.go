@@ -1,9 +1,8 @@
-// this endpoint is
 package AppHandlersV1
 
 import (
 	"clove/internals/apperrors"
-	"clove/internals/auth"
+	"clove/internals/middleware"
 	"clove/internals/meridian"
 	MessageReplication "clove/internals/meridian/replication/message-replication"
 	"errors"
@@ -15,7 +14,6 @@ import (
 
 const (
 	ERROR_MESSAGE_ENTRY_INVALID_APP_ID       = "ERROR_MESSAGE_ENTRY_INVALID_APP_ID"
-	ERROR_MESSAGE_ENTRY_INVALID_APP_KEY_ID   = "ERROR_MESSAGE_ENTRY_INVALID_APP_KEY_ID"
 	ERROR_MESSAGE_ENTRY_MISSING_CHANNEL_ID   = "ERROR_MESSAGE_ENTRY_MISSING_CHANNEL_ID"
 	ERROR_MESSAGE_ENTRY_APP_KEY_NOT_FOUND    = "ERROR_MESSAGE_ENTRY_APP_KEY_NOT_FOUND"
 	ERROR_MESSAGE_ENTRY_FAILED_FETCH_APP_KEY = "ERROR_MESSAGE_ENTRY_FAILED_FETCH_APP_KEY"
@@ -27,21 +25,18 @@ const (
 )
 
 func WSMessageEntry(w http.ResponseWriter, r *http.Request) {
-	session, err := auth.ParseSessionFromRequest(r)
-
-	if !session.Permessions.Can(auth.DELIVERY, auth.CREATE) {
-		auth.UnAuthResponse(w)
+	session, ok := middleware.SessionFromContext(r.Context())
+	if !ok || !session.Permissions.Can(middleware.DELIVERY, middleware.CREATE) {
+		middleware.UnAuthResponse(w)
 		return
 	}
 
-	appId, err := uuid.Parse(r.PathValue("app_id"))
+	appID, err := uuid.Parse(r.PathValue("app_id"))
 	if err != nil {
 		apperrors.WriteError(w, &apperrors.AppError{
 			Code:       ERROR_MESSAGE_ENTRY_INVALID_APP_ID,
-			Message:    "",
 			StatusCode: http.StatusBadRequest,
-
-			ID: uuid.New(),
+			ID:         uuid.New(),
 		})
 		return
 	}
@@ -49,63 +44,34 @@ func WSMessageEntry(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 50*1024)
 	defer r.Body.Close()
 
-	if !session.Permessions.Can(auth.DELIVERY, auth.CREATE) {
-		apperrors.WriteError(w, &apperrors.AppError{
-			Code:       ERROR_MESSAGE_ENTRY_UNAUTHORIZED_API_KEY,
-			Message:    "",
-			StatusCode: http.StatusUnauthorized,
-
-			ID: uuid.New(),
-		})
-		return
-	}
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		var maxBytesErr *http.MaxBytesError
-
 		if errors.As(err, &maxBytesErr) {
 			apperrors.WriteError(w, &apperrors.AppError{
 				Code:       ERROR_MESSAGE_ENTRY_BODY_TOO_LARGE,
-				Message:    "",
 				StatusCode: http.StatusBadRequest,
-
-				ID: uuid.New(),
+				ID:         uuid.New(),
 			})
 		} else {
-
 			apperrors.WriteError(w, &apperrors.AppError{
 				Code:       ERROR_MESSAGE_ENTRY_BAD_BODY,
-				Message:    "",
 				StatusCode: http.StatusBadRequest,
-
-				ID: uuid.New(),
+				ID:         uuid.New(),
 			})
 		}
-
 		return
 	}
 
-	if len(body) > 32*1024 {
-
-		apperrors.WriteError(w, &apperrors.AppError{
-			Code:       ERROR_MESSAGE_ENTRY_BODY_TOO_LARGE,
-			Message:    "",
-			StatusCode: http.StatusBadRequest,
-
-			ID: uuid.New(),
-		})
-		return
-	}
-	channel_id := r.URL.Query().Get("channel_id")
+	channelID := r.URL.Query().Get("channel_id")
 	errList := meridian.Client().ReplicateMessage().PublishInternalReplicatableDeliveryMsgToLocalRabbitMQ(r.Context(), MessageReplication.InternalReplicatableDeliveryMsg{
-		ChannelID: channel_id,
-		AppID:     appId,
+		ChannelID: channelID,
+		AppID:     appID,
 		Payload:   body,
 	})
 	if errList != nil {
 		apperrors.WriteError(w, &apperrors.AppError{
 			Code:       ERROR_MESSAGE_ENTRY_REPLICATION_FAILED,
-			Message:    "",
 			StatusCode: http.StatusInternalServerError,
 			ID:         uuid.New(),
 		})

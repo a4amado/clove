@@ -58,3 +58,46 @@ func (q *Queries) App_Select(ctx context.Context, appID pgtype.UUID) (App, error
 	)
 	return i, err
 }
+
+const credential_SelectByToken = `-- name: Credential_SelectByToken :one
+SELECT id, token, user_id, app_id, channel_id, type, permissions, expires_at, created_at FROM "credential"
+WHERE "token" = $1
+LIMIT 1
+`
+
+func (q *Queries) Credential_SelectByToken(ctx context.Context, token string) (Credential, error) {
+	row := q.db.QueryRow(ctx, credential_SelectByToken, token)
+	var i Credential
+	err := row.Scan(
+		&i.ID,
+		&i.Token,
+		&i.UserID,
+		&i.AppID,
+		&i.ChannelID,
+		&i.Type,
+		&i.Permissions,
+		&i.ExpiresAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const user_Select = `-- name: User_Select :one
+SELECT id, hash, created_at, updated_at, role, number_of_emails FROM "user"
+WHERE "id" = $1
+LIMIT 1
+`
+
+func (q *Queries) User_Select(ctx context.Context, userID pgtype.UUID) (User, error) {
+	row := q.db.QueryRow(ctx, user_Select, userID)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Hash,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Role,
+		&i.NumberOfEmails,
+	)
+	return i, err
+}

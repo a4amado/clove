@@ -18,13 +18,11 @@ var envExample string
 func main() {
 
 	// meridian.Client().ReplicateMessage()
-	// meridian.Client().ReplicateApp()
 	// postgresPool.Client()
 	// valkeyPool.Client(valkeyPool.ValkeyFanout)
 	// valkeyPool.Client(valkeyPool.ValkeyHeartbeat)
 	// valkeyPool.Client(valkeyPool.ValkeyStore)
 
-	// go meridian.Client().ReplicateApp().BridgeRabbitMQAppReplicatorToRedis(context.Background())
 	// go meridian.Client().ReplicateMessage().BridgeRabbitMQInternalDeliveryReplicatorToRedis(context.Background())
 	router := chi.NewMux()
 	router.Use(func(next http.Handler) http.Handler {

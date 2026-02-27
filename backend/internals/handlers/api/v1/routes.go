@@ -1,7 +1,8 @@
 package v1
 
 import (
-	"clove/internals/auth"
+	"clove/internals/middleware"
+	postgresPool "clove/internals/data/postgres/pool"
 	AppHandlersV1 "clove/internals/handlers/api/v1/app"
 	AppKeysHandlersV1 "clove/internals/handlers/api/v1/app/keys"
 	AppRegionsHandlersV1 "clove/internals/handlers/api/v1/app/regions"
@@ -14,6 +15,7 @@ import (
 
 // V1Routes registers all v1 API routes on the given web.Service.
 func V1Routes(service *web.Service) {
+	authMiddleware := middleware.AuthMiddleware(postgresPool.Client())
 
 	// Auth routes (public)
 	service.Post("/v1/auth/sign-up", AuthHandlersV1.Signup())
@@ -31,7 +33,7 @@ func V1Routes(service *web.Service) {
 
 	// Raw handlers (WebSocket + raw-body entry) — kept as http.HandlerFunc
 	service.Method(http.MethodGet, "/v1/apps/{app_id}/ws",
-		auth.AuthMiddleware(http.HandlerFunc(AppHandlersV1.UserConnect)))
+		authMiddleware(http.HandlerFunc(AppHandlersV1.UserConnect)))
 	service.Method(http.MethodPost, "/v1/apps/{app_id}/entry",
-		auth.AuthMiddleware(http.HandlerFunc(AppHandlersV1.WSMessageEntry)))
+		authMiddleware(http.HandlerFunc(AppHandlersV1.WSMessageEntry)))
 }

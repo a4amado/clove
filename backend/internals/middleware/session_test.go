@@ -1,4 +1,4 @@
-package auth
+package middleware
 
 import (
 	"net/http"
@@ -9,9 +9,9 @@ import (
 )
 
 func TestSessionTypeConstants(t *testing.T) {
-	assert.Equal(t, SessionType("OOT"), OOT)
+	assert.Equal(t, SessionType("OTT"), OTT)
 	assert.Equal(t, SessionType("SDK_TOKEN"), SDKToken)
-	assert.Equal(t, SessionType("REGULAR_SESSION"), RegualrSession)
+	assert.Equal(t, SessionType("REGULAR_SESSION"), RegularSession)
 }
 
 func TestSession_Structure(t *testing.T) {
@@ -20,46 +20,42 @@ func TestSession_Structure(t *testing.T) {
 
 	session := Session{
 		Permissions: perms,
-		SessionType: RegualrSession,
+		SessionType: RegularSession,
 	}
 
-	assert.Equal(t, RegualrSession, session.SessionType)
+	assert.Equal(t, RegularSession, session.SessionType)
 	assert.True(t, session.Permissions.Can(APP, CREATE))
 }
 
 func TestUnAuthResponse(t *testing.T) {
 	w := httptest.NewRecorder()
-
 	UnAuthResponse(w)
-
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
 
 func TestAuthMiddleware_Unauthorized(t *testing.T) {
-	// Create a simple handler to test middleware
 	nextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("success"))
 	})
 
-	middleware := AuthMiddleware(nextHandler)
+	// nil DB is safe here — ParseSession returns early when no token is present
+	middleware := AuthMiddleware(nil)(nextHandler)
 
-	// Create request without any auth
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	w := httptest.NewRecorder()
 
 	middleware.ServeHTTP(w, req)
 
-	// Should return 401 since no valid session
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
 
 func TestParseSession_NoValidTokens(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 
-	session, err := ParseSession(req)
+	// nil DB is safe — returns early when token string is empty
+	session, err := ParseSession(req, nil)
 
 	assert.Nil(t, session)
 	assert.Error(t, err)
-	assert.Equal(t, "unauthrized", err.Error())
+	assert.Equal(t, "unauthorized", err.Error())
 }

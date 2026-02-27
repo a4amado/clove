@@ -68,18 +68,6 @@ func TestGetParams_Structure(t *testing.T) {
 	assert.Equal(t, appID, params.AppID)
 }
 
-func TestAppsService_Update_NoOp(t *testing.T) {
-	ctx := context.Background()
-	params := types.ServiceParams{
-		Ctx:      ctx,
-		UseCache: false,
-	}
-	service := NewAppsService(params, nil)
-
-	// Update is a no-op stub, just verify it doesn't panic
-	service.Update()
-}
-
 func TestApp_InsertParams_Structure(t *testing.T) {
 	userID := uuid.New()
 	params := repository.App_InsertParams{

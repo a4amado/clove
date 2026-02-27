@@ -3,6 +3,7 @@ package services
 import (
 	postgresPool "clove/internals/data/postgres/pool"
 	appservice "clove/internals/services/apps"
+	credentialservice "clove/internals/services/credential"
 	repository "clove/internals/services/generatedRepo"
 	"clove/internals/services/types"
 	userservice "clove/internals/services/user"
@@ -15,6 +16,7 @@ type router struct {
 	baseService *types.BaseService
 	Apps        *appservice.AppsService
 	Users       *userservice.Users
+	Credentials *credentialservice.CredentialService
 }
 
 func New(ctx context.Context) *router {
@@ -26,10 +28,14 @@ func New(ctx context.Context) *router {
 			DB: q,
 		},
 	}
+	router.baseService.WithCtx(ctx)
 	router.Apps = &appservice.AppsService{
 		BaseService: router.baseService,
 	}
 	router.Users = &userservice.Users{
+		BaseService: router.baseService,
+	}
+	router.Credentials = &credentialservice.CredentialService{
 		BaseService: router.baseService,
 	}
 
