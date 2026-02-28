@@ -1,6 +1,7 @@
 package AuthHandlersV1
 
 import (
+	"clove/internals/apperrors"
 	"context"
 
 	"github.com/swaggest/usecase"
@@ -17,6 +18,7 @@ func SignIn() usecase.Interactor {
 	u := usecase.NewInteractor(func(ctx context.Context, input SignInInput, output *SignInOutput) error {
 		return nil
 	})
+	u.SetExpectedErrors(apperrors.ErrUnauthorized, apperrors.ErrInternalServerError)
 	u.SetTitle("User Sign In")
 	u.SetTags("Auth")
 	return u

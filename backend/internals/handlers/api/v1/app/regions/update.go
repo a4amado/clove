@@ -2,9 +2,7 @@ package AppRegionsHandlersV1
 
 import (
 	"clove/internals/apperrors"
-	"clove/internals/middleware"
-	postgresPool "clove/internals/data/postgres/pool"
-	"clove/internals/handlers/api/httpctx"
+	"clove/internals/auth"
 	"clove/internals/services"
 	appservice "clove/internals/services/apps"
 	repository "clove/internals/services/generatedRepo"
@@ -27,9 +25,8 @@ type UpdateRegionsOutput struct {
 
 func UpdateAppRegions() usecase.Interactor {
 	u := usecase.NewInteractor(func(ctx context.Context, input UpdateRegionsInput, output *UpdateRegionsOutput) error {
-		r := httpctx.Request(ctx)
-		session, err := middleware.ParseSession(r, postgresPool.Client())
-		if err != nil || !session.Permissions.Can(middleware.KEY, middleware.UPDATE) {
+		session, ok := auth.SessionFromContext(ctx)
+		if !ok || !session.Permissions.Can(auth.KEY, auth.UPDATE) {
 			return &apperrors.AppError{
 				StatusCode: http.StatusUnauthorized,
 				Code:       "UNAUTHORIZED",
@@ -55,7 +52,7 @@ func UpdateAppRegions() usecase.Interactor {
 		}
 
 		appsrvs := services.New(ctx)
-		err = appsrvs.Apps.Regions.Update(appservice.UpdateRegions{
+		err := appsrvs.Apps.Regions.Update(appservice.UpdateRegions{
 			Regions: uniqueRegionsSlice,
 			AppID:   input.AppID,
 		})
@@ -69,6 +66,7 @@ func UpdateAppRegions() usecase.Interactor {
 		output.Regions = input.Regions
 		return nil
 	})
+	u.SetExpectedErrors(apperrors.ErrUnauthorized, apperrors.ErrBadRequest, apperrors.ErrInternalServerError)
 	u.SetTitle("Update App Regions")
 	u.SetTags("Regions")
 	return u

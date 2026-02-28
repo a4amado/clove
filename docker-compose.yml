@@ -119,7 +119,7 @@ services:
       retries: 5
 
   db:
-    image: postgres:16-alpine
+    image: postgres:17
     container_name: postgres
     networks:
       - main_network

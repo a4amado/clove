@@ -2,9 +2,7 @@ package AppRegionsHandlersV1
 
 import (
 	"clove/internals/apperrors"
-	"clove/internals/middleware"
-	postgresPool "clove/internals/data/postgres/pool"
-	"clove/internals/handlers/api/httpctx"
+	"clove/internals/auth"
 	"clove/internals/services"
 	appservice "clove/internals/services/apps"
 	repository "clove/internals/services/generatedRepo"
@@ -25,9 +23,8 @@ type ListRegionsOutput struct {
 
 func ListAppRegions() usecase.Interactor {
 	u := usecase.NewInteractor(func(ctx context.Context, input ListRegionsInput, output *ListRegionsOutput) error {
-		r := httpctx.Request(ctx)
-		session, err := middleware.ParseSession(r, postgresPool.Client())
-		if err != nil || !session.Permissions.Can(middleware.KEY, middleware.READ) {
+		session, ok := auth.SessionFromContext(ctx)
+		if !ok || !session.Permissions.Can(auth.KEY, auth.READ) {
 			return &apperrors.AppError{
 				StatusCode: http.StatusUnauthorized,
 				Code:       "UNAUTHORIZED",
@@ -47,6 +44,7 @@ func ListAppRegions() usecase.Interactor {
 		output.Regions = regions
 		return nil
 	})
+	u.SetExpectedErrors(apperrors.ErrUnauthorized, apperrors.ErrInternalServerError)
 	u.SetTitle("List App Regions")
 	u.SetTags("Regions")
 	return u

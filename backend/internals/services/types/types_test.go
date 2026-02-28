@@ -33,7 +33,7 @@ func TestBaseService_WithCache(t *testing.T) {
 
 	assert.False(t, service.IsCache())
 
-	result := service.WithCache()
+	result := service.WithCache(nil)
 
 	assert.Equal(t, service, result) // Returns self for chaining
 	assert.True(t, service.IsCache())

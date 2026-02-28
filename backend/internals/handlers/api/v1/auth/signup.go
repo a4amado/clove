@@ -2,7 +2,7 @@ package AuthHandlersV1
 
 import (
 	"clove/internals/apperrors"
-	"clove/internals/middleware"
+	"clove/internals/auth"
 	"clove/internals/handlers/api/httpctx"
 	"clove/internals/services"
 	credentialservice "clove/internals/services/credential"
@@ -43,7 +43,7 @@ func Signup() usecase.Interactor {
 			}
 		}
 
-		code, _ := middleware.GenRandKey(10)
+		code, _ := auth.GenRandKey(10)
 		user, err := srvs.Users.Insert(userservice.InsertUserParams{
 			Email:           input.Email,
 			Password:        input.Password,
@@ -64,14 +64,14 @@ func Signup() usecase.Interactor {
 			}
 		}
 
-		token, err := middleware.GenRandKey(32)
+		token, err := auth.GenRandKey(32)
 		if err != nil {
 			tx.Rollback(ctx)
 			return &apperrors.AppError{StatusCode: http.StatusInternalServerError}
 		}
 
-		perms := middleware.NewPermissionsBuilder()
-		perms.Allow(middleware.RESOURCES_ALL, middleware.OPERATIONS_ALL)
+		perms := auth.NewPermissionsBuilder()
+		perms.Allow(auth.RESOURCES_ALL, auth.OPERATIONS_ALL)
 		permsStr, _ := perms.String()
 
 		expires := time.Now().Add(time.Hour * 24 * 7)
@@ -92,12 +92,13 @@ func Signup() usecase.Interactor {
 		}
 
 		if w := httpctx.ResponseWriter(ctx); w != nil {
-			middleware.SetSessionCookie(w, token, expires)
+			auth.SetSessionCookie(w, token, expires)
 		}
 
 		output.User = *user
 		return nil
 	})
+	u.SetExpectedErrors(apperrors.ErrConflict, apperrors.ErrInternalServerError)
 	u.SetTitle("User Signup")
 	u.SetTags("Auth")
 	return u

@@ -1,7 +1,13 @@
 package Api
 
 import (
+	"clove/internals/cache"
+	postgresPool "clove/internals/data/postgres/pool"
+	"clove/internals/data/valkeyPool"
 	"clove/internals/handlers/api/httpctx"
+	"clove/internals/auth"
+	credentialservice "clove/internals/services/credential"
+	repository "clove/internals/services/generatedRepo"
 	v1 "clove/internals/handlers/api/v1"
 
 	"github.com/swaggest/openapi-go/openapi31"
@@ -16,7 +22,13 @@ func NewService() *web.Service {
 	service.OpenAPISchema().SetTitle("Clove API")
 	service.OpenAPISchema().SetVersion("v1.0.0")
 
+	credSvc := credentialservice.New(
+		repository.New(postgresPool.Client()),
+		cache.New(valkeyPool.Client(valkeyPool.ValkeyStore)),
+	)
+
 	service.Use(httpctx.Middleware)
+	service.Use(auth.SessionMiddleware(credSvc))
 
 	v1.V1Routes(service)
 

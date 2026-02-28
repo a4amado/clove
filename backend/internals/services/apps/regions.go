@@ -1,7 +1,9 @@
 package appservice
 
 import (
+	"clove/internals/cache"
 	repository "clove/internals/services/generatedRepo"
+	"context"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -12,22 +14,25 @@ type GetAppRegions struct {
 }
 
 func (s *RegionsService) List(args GetAppRegions) ([]repository.Region, error) {
-	// Try cache first if you implement it
-	// if s.useCache {
-	//     if regions, err := cache.Apps().Regions().List(s.GetCtx(), s.appID); err == nil {
-	//         return regions, nil
-	//     }
-	// }
+	cacheKey := cache.FormatAppRegionsCacheKey(args.AppID)
+
+	if s.CacheReady() {
+		var regions []repository.Region
+		if err := cache.Get(s.GetCtx(), s.Cache, cacheKey, &regions); err == nil {
+			return regions, nil
+		}
+	}
 
 	regions, err := s.DB.App_Region_Select(s.GetCtx(), s.ToPgUUID(args.AppID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to list regions: %w", err)
 	}
 
-	// Update cache async if implemented
-	// s.CacheAsync(func(ctx context.Context) error {
-	//     return cache.Apps().Regions().Set(ctx, s.appID, regions)
-	// })
+	if s.CacheReady() {
+		s.CacheAsync(func(ctx context.Context) error {
+			return cache.Set(ctx, s.Cache, cacheKey, regions, cache.TTLRegions)
+		})
+	}
 
 	return regions, nil
 }
@@ -46,10 +51,11 @@ func (s *RegionsService) Update(args UpdateRegions) error {
 		return fmt.Errorf("failed to update regions: %w", err)
 	}
 
-	// Invalidate cache async if implemented
-	// s.CacheAsync(func(ctx context.Context) error {
-	//     return cache.Apps().Regions().Delete(ctx, s.appID)
-	// })
+	if s.CacheReady() {
+		s.CacheAsync(func(ctx context.Context) error {
+			return s.Cache.Delete(ctx, string(cache.FormatAppRegionsCacheKey(args.AppID)))
+		})
+	}
 
 	return nil
 }

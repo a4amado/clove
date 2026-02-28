@@ -1,7 +1,9 @@
 package appservice
 
 import (
+	"clove/internals/cache"
 	repository "clove/internals/services/generatedRepo"
+	"context"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -20,10 +22,26 @@ type GetParams struct {
 }
 
 func (s *AppsService) Get(args GetParams) (*repository.App, error) {
+	cacheKey := cache.FormatAppCacheKey(args.AppID)
+
+	if s.CacheReady() {
+		var app repository.App
+		if err := cache.Get(s.GetCtx(), s.Cache, cacheKey, &app); err == nil {
+			return &app, nil
+		}
+	}
+
 	app, err := s.DB.App_Select(s.GetCtx(), s.ToPgUUID(args.AppID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get app: %w", err)
 	}
+
+	if s.CacheReady() {
+		s.CacheAsync(func(ctx context.Context) error {
+			return cache.Set(ctx, s.Cache, cacheKey, app, cache.TTLApp)
+		})
+	}
+
 	return &app, nil
 }
 
@@ -51,6 +69,13 @@ func (s *AppsService) Delete(args DeleteParams) error {
 	if err != nil {
 		return fmt.Errorf("failed to delete app: %w", err)
 	}
+
+	if s.CacheReady() {
+		s.CacheAsync(func(ctx context.Context) error {
+			return s.Cache.Delete(ctx, string(cache.FormatAppCacheKey(args.AppID)))
+		})
+	}
+
 	return nil
 }
 
@@ -71,5 +96,13 @@ func (s *AppsService) Update(args UpdateParams) (*repository.App, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to update app: %w", err)
 	}
+
+	if s.CacheReady() {
+		cacheKey := cache.FormatAppCacheKey(args.AppID)
+		s.CacheAsync(func(ctx context.Context) error {
+			return cache.Set(ctx, s.Cache, cacheKey, app, cache.TTLApp)
+		})
+	}
+
 	return &app, nil
 }

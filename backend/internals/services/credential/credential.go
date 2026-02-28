@@ -1,8 +1,10 @@
 package credentialservice
 
 import (
+	"clove/internals/cache"
 	repository "clove/internals/services/generatedRepo"
 	"clove/internals/services/types"
+	"context"
 	"fmt"
 	"time"
 
@@ -12,6 +14,15 @@ import (
 
 type CredentialService struct {
 	*types.BaseService
+}
+
+// New creates a CredentialService backed by the given DB and optional cache client.
+func New(db *repository.Queries, cacheClient *cache.Client) *CredentialService {
+	base := &types.BaseService{DB: db}
+	if cacheClient != nil {
+		base.WithCache(cacheClient)
+	}
+	return &CredentialService{BaseService: base}
 }
 
 type InsertParams struct {
@@ -50,11 +61,27 @@ func (s *CredentialService) Create(args InsertParams) (*repository.Credential, e
 	return &cred, nil
 }
 
-func (s *CredentialService) GetByToken(token string) (*repository.Credential, error) {
-	cred, err := s.DB.Credential_SelectByToken(s.GetCtx(), token)
+func (s *CredentialService) GetByToken(ctx context.Context, token string) (*repository.Credential, error) {
+	cacheKey := cache.FormatCredentialCacheKey(token)
+
+	if s.CacheReady() {
+		var cred repository.Credential
+		if err := cache.Get(ctx, s.Cache, cacheKey, &cred); err == nil {
+			return &cred, nil
+		}
+	}
+
+	cred, err := s.DB.Credential_SelectByToken(ctx, token)
 	if err != nil {
 		return nil, fmt.Errorf("credential not found: %w", err)
 	}
+
+	if s.CacheReady() {
+		s.CacheAsync(func(aCtx context.Context) error {
+			return cache.Set(aCtx, s.Cache, cacheKey, cred, cache.TTLCredential)
+		})
+	}
+
 	return &cred, nil
 }
 

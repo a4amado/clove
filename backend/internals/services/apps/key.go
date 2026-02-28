@@ -5,6 +5,7 @@ import (
 	repository "clove/internals/services/generatedRepo"
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -61,23 +62,22 @@ type GetKeyParams struct {
 	Key   string
 	AppID uuid.UUID
 }
+
 type GetKeyReturn struct {
 	repository.AppApiKey
 }
 
 func (s *KeysService) Get(args GetKeyParams) (*GetKeyReturn, error) {
-	// Try cache first
-	var key repository.AppApiKey
 	cacheKey := cache.FormatKeyCacheKey(args.AppID, args.Key)
 
-	err := cache.Get(s.GetCtx(), cacheKey, &key)
-	if err == nil {
-		return nil, err
-
+	if s.CacheReady() {
+		var key repository.AppApiKey
+		if err := cache.Get(s.GetCtx(), s.Cache, cacheKey, &key); err == nil {
+			return &GetKeyReturn{AppApiKey: key}, nil
+		}
 	}
 
-	// Cache miss - fetch from DB
-	key, err = s.DB.App_Key_Select(s.GetCtx(), repository.App_Key_SelectParams{
+	key, err := s.DB.App_Key_Select(s.GetCtx(), repository.App_Key_SelectParams{
 		AppID: s.ToPgUUID(args.AppID),
 		Key:   args.Key,
 	})
@@ -85,9 +85,13 @@ func (s *KeysService) Get(args GetKeyParams) (*GetKeyReturn, error) {
 		return nil, fmt.Errorf("failed to get key: %w", err)
 	}
 
-	return &GetKeyReturn{
-		AppApiKey: key,
-	}, nil
+	if s.CacheReady() {
+		s.CacheAsync(func(ctx context.Context) error {
+			return cache.Set(ctx, s.Cache, cacheKey, key, 24*time.Hour)
+		})
+	}
+
+	return &GetKeyReturn{AppApiKey: key}, nil
 }
 
 type DeleteKeyParams struct {
@@ -108,11 +112,12 @@ func (s *KeysService) Delete(args DeleteKeyParams) error {
 		return fmt.Errorf("key not found")
 	}
 
-	// Invalidate cache async
-	s.CacheAsync(func(ctx context.Context) error {
-		cacheKey := fmt.Sprintf("app:%s:key:%s", args.AppID.String(), args.KeyID.String())
-		return cache.Delete(ctx, cacheKey)
-	})
+	if s.CacheReady() {
+		s.CacheAsync(func(ctx context.Context) error {
+			cacheKey := cache.FormatKeyCacheKey(args.AppID, args.KeyID.String())
+			return s.Cache.Delete(ctx, string(cacheKey))
+		})
+	}
 
 	return nil
 }

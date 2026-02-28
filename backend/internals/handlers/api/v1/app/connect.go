@@ -2,7 +2,7 @@ package AppHandlersV1
 
 import (
 	"clove/internals/apperrors"
-	"clove/internals/middleware"
+	"clove/internals/auth"
 	"clove/internals/heartbeat/dogpile"
 	"clove/internals/meridian"
 	"clove/internals/meridian/fanout"
@@ -47,9 +47,9 @@ func (m *MessageToClient) Binary() ([]byte, error) {
 // UserConnect upgrades the incoming HTTP request to a WebSocket for the specified app
 // and subscribes the resulting connection to the requested channel(s).
 func UserConnect(w http.ResponseWriter, r *http.Request) {
-	session, ok := middleware.SessionFromContext(r.Context())
-	if !ok || !session.Permissions.Can(middleware.DELIVERY, middleware.READ) {
-		middleware.UnAuthResponse(w)
+	session, ok := auth.SessionFromContext(r.Context())
+	if !ok || !session.Permissions.Can(auth.DELIVERY, auth.READ) {
+		auth.UnAuthResponse(w)
 		return
 	}
 

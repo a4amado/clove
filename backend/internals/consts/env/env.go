@@ -62,6 +62,18 @@ func mustGetFloat(key string) float64 {
 	return floatVal
 }
 
+func Env() EnvType {
+	loadEnv()
+	if os.Getenv("APP_ENV") == string(PROD) {
+		return PROD
+	}
+	return DEV
+}
+
+func IsProd() bool {
+	return Env() == PROD
+}
+
 // Public getters
 func ValkeyStoreURL() string {
 	return mustGetString("VALKEY_STORE_URL")
@@ -136,12 +148,4 @@ func RabbitMQNumReaders() int {
 
 	}
 	return nOfReaders
-}
-
-func JWTSecret() []byte {
-	secret := mustGetString("JWT_SECRET")
-	if secret == "" {
-		panic("JWT_SECRET environment variable not set")
-	}
-	return []byte(secret)
 }

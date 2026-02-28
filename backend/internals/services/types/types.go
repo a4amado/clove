@@ -1,6 +1,7 @@
 package types
 
 import (
+	"clove/internals/cache"
 	repository "clove/internals/services/generatedRepo"
 	"context"
 	"time"
@@ -16,7 +17,8 @@ type ServiceParams struct {
 	UseCache bool
 }
 
-func NewBaseService(ctx context.Context, queries *repository.Queries, useCache bool) *BaseService {
+// NewBaseService creates a BaseService. The queries parameter is ignored (set DB directly).
+func NewBaseService(ctx context.Context, _ *repository.Queries, useCache bool) *BaseService {
 	return &BaseService{
 		ctx:      ctx,
 		useCache: useCache,
@@ -26,21 +28,31 @@ func NewBaseService(ctx context.Context, queries *repository.Queries, useCache b
 type BaseService struct {
 	ctx      context.Context
 	DB       *repository.Queries
+	Cache    *cache.Client
 	useCache bool
 }
 
-func (b *BaseService) WithCache() *BaseService {
+// WithCache enables cache and sets the cache client.
+func (b *BaseService) WithCache(client *cache.Client) *BaseService {
 	b.useCache = true
+	b.Cache = client
 	return b
 }
 
+// IsCache reports whether cache is enabled.
 func (b *BaseService) IsCache() bool {
 	return b.useCache
+}
+
+// CacheReady reports whether a cache client is available and cache is enabled.
+func (b *BaseService) CacheReady() bool {
+	return b.useCache && b.Cache != nil
 }
 
 func (b *BaseService) GetCtx() context.Context {
 	return b.ctx
 }
+
 func (b *BaseService) WithCtx(ctx context.Context) *BaseService {
 	b.ctx = ctx
 	return b
@@ -54,19 +66,16 @@ func (b *BaseService) ToPgText(s string) pgtype.Text {
 	return pgtype.Text{String: s, Valid: true}
 }
 
-// cacheAsync runs cache operations in background with proper timeout
+// CacheAsync runs a cache operation in the background with a short timeout.
+// No-ops if cache is not enabled or no client is set.
 func (b *BaseService) CacheAsync(fn func(context.Context) error) {
-	if !b.useCache {
+	if !b.IsCache() {
 		return
 	}
 
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 		defer cancel()
-
-		if err := fn(ctx); err != nil {
-			// TODO: Add structured logging here
-			// log.Error("cache operation failed", "error", err)
-		}
+		fn(ctx) //nolint:errcheck
 	}()
 }

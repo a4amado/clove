@@ -2,9 +2,7 @@ package AppKeysHandlersV1
 
 import (
 	"clove/internals/apperrors"
-	"clove/internals/middleware"
-	postgresPool "clove/internals/data/postgres/pool"
-	"clove/internals/handlers/api/httpctx"
+	"clove/internals/auth"
 	"clove/internals/services"
 	appservice "clove/internals/services/apps"
 	credentialservice "clove/internals/services/credential"
@@ -29,23 +27,22 @@ type CreateKeyOutput struct {
 
 func CreateAppApiKey() usecase.Interactor {
 	u := usecase.NewInteractor(func(ctx context.Context, input CreateKeyInput, output *CreateKeyOutput) error {
-		r := httpctx.Request(ctx)
-		session, err := middleware.ParseSession(r, postgresPool.Client())
-		if err != nil || !session.Permissions.Can(middleware.KEY, middleware.CREATE) {
+		session, ok := auth.SessionFromContext(ctx)
+		if !ok || !session.Permissions.Can(auth.KEY, auth.CREATE) {
 			return &apperrors.AppError{
 				StatusCode: http.StatusUnauthorized,
 				Code:       "UNAUTHORIZED",
 			}
 		}
 
-		token, err := middleware.GenRandKey(32)
+		token, err := auth.GenRandKey(32)
 		if err != nil {
 			return &apperrors.AppError{StatusCode: http.StatusInternalServerError}
 		}
 
-		perms := middleware.NewPermissionsBuilder()
-		perms.Allow(middleware.DELIVERY, middleware.CREATE)
-		perms.Allow(middleware.OneTimeToken, middleware.CREATE)
+		perms := auth.NewPermissionsBuilder()
+		perms.Allow(auth.DELIVERY, auth.CREATE)
+		perms.Allow(auth.OneTimeToken, auth.CREATE)
 		permsStr, _ := perms.String()
 
 		srvs, tx, err := services.New(ctx).WithCache().WithTx()
@@ -84,6 +81,7 @@ func CreateAppApiKey() usecase.Interactor {
 		output.Token = token
 		return nil
 	})
+	u.SetExpectedErrors(apperrors.ErrUnauthorized, apperrors.ErrInternalServerError)
 	u.SetTitle("Create API Key")
 	u.SetTags("Keys")
 	return u

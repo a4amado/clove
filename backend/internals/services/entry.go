@@ -1,7 +1,9 @@
 package services
 
 import (
+	"clove/internals/cache"
 	postgresPool "clove/internals/data/postgres/pool"
+	"clove/internals/data/valkeyPool"
 	appservice "clove/internals/services/apps"
 	credentialservice "clove/internals/services/credential"
 	repository "clove/internals/services/generatedRepo"
@@ -20,7 +22,6 @@ type router struct {
 }
 
 func New(ctx context.Context) *router {
-
 	q := repository.New(postgresPool.Client())
 
 	router := &router{
@@ -43,10 +44,11 @@ func New(ctx context.Context) *router {
 }
 
 func (b *router) WithCache() *router {
-	b.baseService.WithCache()
+	cacheClient := cache.New(valkeyPool.Client(valkeyPool.ValkeyStore))
+	b.baseService.WithCache(cacheClient)
 	return b
-
 }
+
 func (b *router) WithTx() (*router, pgx.Tx, error) {
 	tx, err := postgresPool.NewTx(b.baseService.GetCtx(), pgx.TxOptions{})
 	if err != nil {

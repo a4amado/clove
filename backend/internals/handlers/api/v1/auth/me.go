@@ -2,9 +2,7 @@ package AuthHandlersV1
 
 import (
 	"clove/internals/apperrors"
-	"clove/internals/middleware"
-	postgresPool "clove/internals/data/postgres/pool"
-	"clove/internals/handlers/api/httpctx"
+	"clove/internals/auth"
 	"clove/internals/services"
 	repository "clove/internals/services/generatedRepo"
 	"context"
@@ -22,9 +20,8 @@ type MeOutput struct {
 
 func Me() usecase.Interactor {
 	u := usecase.NewInteractor(func(ctx context.Context, input MeInput, output *MeOutput) error {
-		r := httpctx.Request(ctx)
-		session, err := middleware.ParseSession(r, postgresPool.Client())
-		if err != nil || session.SessionType != middleware.RegularSession {
+		session, ok := auth.SessionFromContext(ctx)
+		if !ok || session.SessionType != auth.RegularSession {
 			return &apperrors.AppError{
 				StatusCode: http.StatusUnauthorized,
 				Code:       "UNAUTHORIZED",
@@ -43,6 +40,7 @@ func Me() usecase.Interactor {
 		output.User = *user
 		return nil
 	})
+	u.SetExpectedErrors(apperrors.ErrUnauthorized)
 	u.SetTitle("Get Current User")
 	u.SetTags("Auth")
 	return u

@@ -2,9 +2,7 @@ package AppKeysHandlersV1
 
 import (
 	"clove/internals/apperrors"
-	"clove/internals/middleware"
-	postgresPool "clove/internals/data/postgres/pool"
-	"clove/internals/handlers/api/httpctx"
+	"clove/internals/auth"
 	"clove/internals/services"
 	appservice "clove/internals/services/apps"
 	"context"
@@ -23,9 +21,8 @@ type DeleteKeyOutput struct{}
 
 func DeleteAppApiKey() usecase.Interactor {
 	u := usecase.NewInteractor(func(ctx context.Context, input DeleteKeyInput, output *DeleteKeyOutput) error {
-		r := httpctx.Request(ctx)
-		session, err := middleware.ParseSession(r, postgresPool.Client())
-		if err != nil || !session.Permissions.Can(middleware.KEY, middleware.DESTROY) {
+		session, ok := auth.SessionFromContext(ctx)
+		if !ok || !session.Permissions.Can(auth.KEY, auth.DESTROY) {
 			return &apperrors.AppError{
 				StatusCode: http.StatusUnauthorized,
 				Code:       "UNAUTHORIZED",
@@ -57,6 +54,7 @@ func DeleteAppApiKey() usecase.Interactor {
 
 		return nil
 	})
+	u.SetExpectedErrors(apperrors.ErrUnauthorized, apperrors.ErrBadRequest, apperrors.ErrInternalServerError)
 	u.SetTitle("Delete API Key")
 	u.SetTags("Keys")
 	return u
