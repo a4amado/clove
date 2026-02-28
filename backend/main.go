@@ -28,6 +28,10 @@ func main() {
 	router.Use(func(next http.Handler) http.Handler {
 		return logger.WrapWithSentry(next.ServeHTTP)
 	})
+
+	router.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+	})
 	router.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(404)
 	})

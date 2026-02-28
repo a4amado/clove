@@ -1,41 +1,49 @@
 services:
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx_proxy
+    ports:
+      - "80:80"
+    depends_on:
+      frontend:
+        condition: service_started
+      clove:
+        condition: service_healthy
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
+    networks:
+      - main_network
+
   clove:
     build:
       context: ./backend
       dockerfile: dockerfile
     container_name: clove
     depends_on:
-      - db
-      - mongo
-      - valkey
-      - rabbitmq
+      db:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     networks:
       - main_network
     ports:
       - "8080:8080"
     restart: unless-stopped
     environment:
-      # Environment
       - ENV=PROD
-      # PostgreSQL - Use service name, not localhost
       - POSTGRES_DATABASE_URL=postgresql://postgres:example@db:5432/clove?sslmode=disable
-      # MongoDB - Use service name with credentials
-      - MONGO_HISTORY_DATABASE_URL=mongodb://root:example@mongo:27017
-      - MONGO_HISTORY_DATABASE_NAME=clove-history
-      - MONGO_HISTORY_DATABASE_USR_COLLECTION_NAME=user-history
-      - MONGO_HISTORY_DATABASE_APP_COLLECTION_NAME=app-history
-      # Valkey - Use service name and container password (Redis-compatible protocol)
-      - REDIS_STORE_URL=redis://:mypassword@valkey:6379/0
-      - REDIS_FANOUT_URL=redis://:mypassword@valkey:6379/1
-      - REDIS_HEARTBEAT_URL=redis://:mypassword@valkey:6379/3
-      # Geo-Region
+      - VALKEY_STORE_URL=redis://:mypassword@valkey:6379/0
+      - VALKEY_FANOUT_URL=redis://:mypassword@valkey:6379/1
+      - VALKEY_HEARTBEAT_URL=redis://:mypassword@valkey:6379/3
       - REGION=dk1
-      # RabbitMQ - Use service name
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
       - RABBITMQ_READER_BUFFER_SIZE=1000
       - RABBITMQ_PREFETCH_COUNT=100
       - RABBITMQ_NUM_READERS=5
-      # Mailjet
       - MAILJET_API_KEY=3eb4240fd3a39737a465193758b8a60f
       - MAILJET_API_SECRETS=0735fbb5b4be3c84d00775b88e13e56b
     healthcheck:
@@ -51,13 +59,10 @@ services:
       dockerfile: dockerfile
     container_name: frontend
     depends_on:
-      - clove
+      clove:
+        condition: service_healthy
     networks:
       - main_network
-    ports:
-      - "80:80"
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     restart: unless-stopped
 
   rabbitmq:
@@ -97,27 +102,6 @@ services:
       timeout: 3s
       retries: 5
 
-  mongo:
-    image: mongo:7.0
-    container_name: mongo
-    networks:
-      - main_network
-    ports:
-      - "27017:27017"
-    restart: unless-stopped
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: example
-      MONGO_INITDB_DATABASE: clove-history
-    volumes:
-      - mongo_data:/data/db
-      - mongo_config:/data/configdb
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   db:
     image: postgres:17
     container_name: postgres
@@ -133,6 +117,7 @@ services:
       POSTGRES_DB: clove
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./backend/internals/data/postgres/schema/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -141,10 +126,6 @@ services:
 
 volumes:
   valkey_data:
-    driver: local
-  mongo_data:
-    driver: local
-  mongo_config:
     driver: local
   postgres_data:
     driver: local

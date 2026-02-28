@@ -50,17 +50,18 @@ func Client() *pgxpool.Pool {
 				return fmt.Errorf("failed to load user_role: %w", err)
 			}
 			conn.TypeMap().RegisterType(UserRole)
-			AppType, err := conn.LoadType(ctx, "app_type")
+
+			credentialType, err := conn.LoadType(ctx, "credential_type")
 			if err != nil {
-				return fmt.Errorf("failed to load user_role: %w", err)
+				return fmt.Errorf("failed to load credential_type: %w", err)
 			}
-			conn.TypeMap().RegisterType(AppType)
+			conn.TypeMap().RegisterType(credentialType)
 
 			return nil
 		}
 		pool, err := pgxpool.NewWithConfig(context.Background(), config)
 		if err != nil {
-
+			panic(fmt.Errorf("failed to create postgres pool: %w", err))
 		}
 
 		dbPool = pool

@@ -20,11 +20,12 @@ type MeOutput struct {
 
 func Me() usecase.Interactor {
 	u := usecase.NewInteractor(func(ctx context.Context, input MeInput, output *MeOutput) error {
+
 		session, ok := auth.SessionFromContext(ctx)
 		if !ok || session.SessionType != auth.RegularSession {
 			return &apperrors.AppError{
 				StatusCode: http.StatusUnauthorized,
-				Code:       "UNAUTHORIZED",
+				Code:       "UNAUTHssORIZED",
 			}
 		}
 

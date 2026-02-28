@@ -7,12 +7,12 @@ export function createApp(params: {
   user_id: string;
   allowed_origins: string[];
 }): Promise<AppWithKeys> {
-  return api<AppWithKeys>("/apps/", {
+  return api<AppWithKeys>("/apps", {
     method: "POST",
     body: JSON.stringify(params),
   });
 }
 
 export function getApp(appId: string): Promise<App> {
-  return api<App>(`/apps/${appId}/`);
+  return api<App>(`/apps/${appId}`);
 }

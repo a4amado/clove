@@ -9,7 +9,7 @@ export function updateRegions(
   appId: string,
   regions: Region[],
 ): Promise<Region[]> {
-  return api<Region[]>(`/apps/${appId}/regions/`, {
+  return api<Region[]>(`/apps/${appId}/regions`, {
     method: "PATCH",
     body: JSON.stringify({ regions }),
   });

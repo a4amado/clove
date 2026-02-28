@@ -1,0 +1,23 @@
+services:
+  nginx:
+    volumes:
+      - ./nginx.dev.conf:/etc/nginx/conf.d/default.conf:ro
+  clove:
+    build:
+      context: ./backend
+      dockerfile: dockerfile.dev
+    environment:
+      - ENV=DEV
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: dockerfile.dev
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      clove:
+        condition: service_started 
