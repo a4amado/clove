@@ -1,9 +1,11 @@
-package auth
+package middleware
 
 import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	authservice "clove/internals/services/auth"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -15,8 +17,8 @@ func TestSessionTypeConstants(t *testing.T) {
 }
 
 func TestSession_Structure(t *testing.T) {
-	perms := NewPermissionsBuilder()
-	perms.Allow(APP, CREATE)
+	perms := authservice.NewPermissionsBuilder()
+	perms.Allow(authservice.APP, authservice.CREATE)
 
 	sess := Session{
 		Permissions: perms,
@@ -24,7 +26,7 @@ func TestSession_Structure(t *testing.T) {
 	}
 
 	assert.Equal(t, RegularSession, sess.SessionType)
-	assert.True(t, sess.Permissions.Can(APP, CREATE))
+	assert.True(t, sess.Permissions.Can(authservice.APP, authservice.CREATE))
 }
 
 func TestUnAuthResponse(t *testing.T) {

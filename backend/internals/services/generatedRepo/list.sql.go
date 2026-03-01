@@ -85,6 +85,43 @@ func (q *Queries) App_List_ByUserID(ctx context.Context, userID pgtype.UUID) ([]
 	return items, nil
 }
 
+const credential_List_ByUserID = `-- name: Credential_List_ByUserID :many
+SELECT id, token, user_id, app_id, channel_id, type, permissions, expires_at, created_at
+FROM "credential"
+WHERE "user_id" = $1
+ORDER BY "created_at" DESC
+`
+
+func (q *Queries) Credential_List_ByUserID(ctx context.Context, userID pgtype.UUID) ([]Credential, error) {
+	rows, err := q.db.Query(ctx, credential_List_ByUserID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Credential
+	for rows.Next() {
+		var i Credential
+		if err := rows.Scan(
+			&i.ID,
+			&i.Token,
+			&i.UserID,
+			&i.AppID,
+			&i.ChannelID,
+			&i.Type,
+			&i.Permissions,
+			&i.ExpiresAt,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const userEmails_List_ByUserID = `-- name: UserEmails_List_ByUserID :many
 SELECT
     id, email, user_id, created_at, updated_at, verified_at, code

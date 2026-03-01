@@ -2,7 +2,8 @@ package AppHandlersV1
 
 import (
 	"clove/internals/apperrors"
-	"clove/internals/auth"
+	"clove/internals/middleware"
+	authservice "clove/internals/services/auth"
 	"clove/internals/meridian"
 	MessageReplication "clove/internals/meridian/replication/message-replication"
 	"errors"
@@ -25,9 +26,9 @@ const (
 )
 
 func WSMessageEntry(w http.ResponseWriter, r *http.Request) {
-	session, ok := auth.SessionFromContext(r.Context())
-	if !ok || !session.Permissions.Can(auth.DELIVERY, auth.CREATE) {
-		auth.UnAuthResponse(w)
+	session, ok := middleware.SessionFromContext(r.Context())
+	if !ok || !session.Permissions.Can(authservice.DELIVERY, authservice.CREATE) {
+		middleware.UnAuthResponse(w)
 		return
 	}
 

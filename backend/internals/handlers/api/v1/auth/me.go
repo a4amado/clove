@@ -2,7 +2,7 @@ package AuthHandlersV1
 
 import (
 	"clove/internals/apperrors"
-	"clove/internals/auth"
+	"clove/internals/middleware"
 	"clove/internals/services"
 	repository "clove/internals/services/generatedRepo"
 	"context"
@@ -21,11 +21,11 @@ type MeOutput struct {
 func Me() usecase.Interactor {
 	u := usecase.NewInteractor(func(ctx context.Context, input MeInput, output *MeOutput) error {
 
-		session, ok := auth.SessionFromContext(ctx)
-		if !ok || session.SessionType != auth.RegularSession {
+		session, ok := middleware.SessionFromContext(ctx)
+		if !ok || session.SessionType != middleware.RegularSession {
 			return &apperrors.AppError{
 				StatusCode: http.StatusUnauthorized,
-				Code:       "UNAUTHssORIZED",
+				Code:       "UNAUTHORIZED",
 			}
 		}
 

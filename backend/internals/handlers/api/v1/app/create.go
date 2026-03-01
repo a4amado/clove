@@ -2,11 +2,12 @@ package AppHandlersV1
 
 import (
 	"clove/internals/apperrors"
-	"clove/internals/auth"
+	"clove/internals/middleware"
 	"clove/internals/services"
 	repository "clove/internals/services/generatedRepo"
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -38,8 +39,19 @@ const (
 
 func CreateApp() usecase.Interactor {
 	u := usecase.NewInteractor(func(ctx context.Context, input CreateAppInput, output *CreateAppOutput) error {
-		session, ok := auth.SessionFromContext(ctx)
-		if !ok || !session.Permissions.Can(auth.APP, auth.CREATE) {
+
+		s, ok := middleware.SessionFromContext(ctx)
+
+		log.Println("s", s)
+		srvs, tx, err := services.New(ctx).WithCache().WithTx()
+		if err != nil {
+			return &apperrors.AppError{
+				Code:       ERROR_CREATE_APP_FAILED_START_TX,
+				StatusCode: http.StatusInternalServerError,
+			}
+		}
+
+		if !ok {
 			return &apperrors.AppError{
 				StatusCode: http.StatusUnauthorized,
 				Code:       "UNAUTHORIZED",
@@ -57,13 +69,6 @@ func CreateApp() usecase.Interactor {
 			}
 		}
 
-		srvs, tx, err := services.New(ctx).WithTx()
-		if err != nil {
-			return &apperrors.AppError{
-				Code:       ERROR_CREATE_APP_FAILED_START_TX,
-				StatusCode: http.StatusInternalServerError,
-			}
-		}
 		app, err := srvs.Apps.Create(repository.App_InsertParams{
 			AppSlug: fmt.Sprintf("%s:%s", uuid.NewString(), input.AppSlug),
 			Regions: input.Regions,

@@ -1,0 +1,71 @@
+info:
+  name: User Sign In
+  type: http
+  seq: 2
+  tags:
+    - Auth
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/v1/auth/sign-in"
+  body:
+    type: json
+    data: |-
+      {
+        "email": "",
+        "password": ""
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: 204 Response
+    description: No Content
+    request:
+      url: "{{baseUrl}}/api/v1/auth/sign-in"
+      method: POST
+      body:
+        type: json
+        data: |-
+          {
+            "email": "",
+            "password": ""
+          }
+    response:
+      status: 204
+      statusText: No Content
+      body:
+        type: text
+        data: ""
+  - name: 401 Response
+    description: Unauthorized
+    request:
+      url: "{{baseUrl}}/api/v1/auth/sign-in"
+      method: POST
+      body:
+        type: json
+        data: |-
+          {
+            "email": "",
+            "password": ""
+          }
+    response:
+      status: 401
+      statusText: Unauthorized
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "code": 0,
+            "context": {},
+            "error": "",
+            "status": ""
+          }

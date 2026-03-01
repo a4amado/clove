@@ -1,13 +1,15 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import * as appsApi from "../api/apps";
 import type { AppWithKeys } from "../types";
+import { useV1AppListApps } from "../api/generated.ts";
 
 export default function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [apps, setApps] = useState<AppWithKeys[]>([]);
+  const appsQuery = useV1AppListApps()
+
   const [showCreate, setShowCreate] = useState(false);
   const [slug, setSlug] = useState("");
   const [regions, setRegions] = useState("");

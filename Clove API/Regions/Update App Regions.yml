@@ -1,0 +1,146 @@
+info:
+  name: Update App Regions
+  type: http
+  seq: 2
+  tags:
+    - Regions
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/api/v1/apps/:app_id/regions"
+  params:
+    - name: app_id
+      value: ""
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "regions": ""
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: 200 Response
+    description: OK
+    request:
+      url: "{{baseUrl}}/api/v1/apps/:app_id/regions"
+      method: PATCH
+      params:
+        - name: app_id
+          value: ""
+          type: path
+      body:
+        type: json
+        data: |-
+          {
+            "regions": ""
+          }
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "regions": ""
+          }
+  - name: 400 Response
+    description: Bad Request
+    request:
+      url: "{{baseUrl}}/api/v1/apps/:app_id/regions"
+      method: PATCH
+      params:
+        - name: app_id
+          value: ""
+          type: path
+      body:
+        type: json
+        data: |-
+          {
+            "regions": ""
+          }
+    response:
+      status: 400
+      statusText: Bad Request
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "code": 0,
+            "context": {},
+            "error": "",
+            "status": ""
+          }
+  - name: 401 Response
+    description: Unauthorized
+    request:
+      url: "{{baseUrl}}/api/v1/apps/:app_id/regions"
+      method: PATCH
+      params:
+        - name: app_id
+          value: ""
+          type: path
+      body:
+        type: json
+        data: |-
+          {
+            "regions": ""
+          }
+    response:
+      status: 401
+      statusText: Unauthorized
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "code": 0,
+            "context": {},
+            "error": "",
+            "status": ""
+          }
+  - name: 500 Response
+    description: Internal Server Error
+    request:
+      url: "{{baseUrl}}/api/v1/apps/:app_id/regions"
+      method: PATCH
+      params:
+        - name: app_id
+          value: ""
+          type: path
+      body:
+        type: json
+        data: |-
+          {
+            "regions": ""
+          }
+    response:
+      status: 500
+      statusText: Internal Server Error
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "code": 0,
+            "context": {},
+            "error": "",
+            "status": ""
+          }

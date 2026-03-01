@@ -2,10 +2,10 @@ package AuthHandlersV1
 
 import (
 	"clove/internals/apperrors"
-	"clove/internals/auth"
 	"clove/internals/handlers/api/httpctx"
+	"clove/internals/middleware"
+	authservice "clove/internals/services/auth"
 	"clove/internals/services"
-	credentialservice "clove/internals/services/credential"
 	repository "clove/internals/services/generatedRepo"
 	userservice "clove/internals/services/user"
 	"context"
@@ -43,7 +43,7 @@ func Signup() usecase.Interactor {
 			}
 		}
 
-		code, _ := auth.GenRandKey(10)
+		code, _ := authservice.GenRandKey(10)
 		user, err := srvs.Users.Insert(userservice.InsertUserParams{
 			Email:           input.Email,
 			Password:        input.Password,
@@ -64,18 +64,18 @@ func Signup() usecase.Interactor {
 			}
 		}
 
-		token, err := auth.GenRandKey(32)
+		token, err := authservice.GenRandKey(32)
 		if err != nil {
 			tx.Rollback(ctx)
 			return &apperrors.AppError{StatusCode: http.StatusInternalServerError}
 		}
 
-		perms := auth.NewPermissionsBuilder()
-		perms.Allow(auth.RESOURCES_ALL, auth.OPERATIONS_ALL)
+		perms := authservice.NewPermissionsBuilder()
+		perms.Allow(authservice.RESOURCES_ALL, authservice.OPERATIONS_ALL)
 		permsStr, _ := perms.String()
 
 		expires := time.Now().Add(time.Hour * 24 * 7)
-		_, err = srvs.Credentials.Create(credentialservice.InsertParams{
+		_, err = srvs.Auth.Create(authservice.InsertParams{
 			Token:       token,
 			UserID:      uuid.UUID(user.ID.Bytes),
 			Type:        repository.CredentialTypeSession,
@@ -92,7 +92,7 @@ func Signup() usecase.Interactor {
 		}
 
 		if w := httpctx.ResponseWriter(ctx); w != nil {
-			auth.SetSessionCookie(w, token, expires)
+			middleware.SetSessionCookie(w, token, expires)
 		}
 
 		output.User = *user

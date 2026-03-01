@@ -1,28 +1,26 @@
-package credentialservice
+package authservice
 
 import (
-	"clove/internals/cache"
-	repository "clove/internals/services/generatedRepo"
-	"clove/internals/services/types"
 	"context"
 	"fmt"
 	"time"
+
+	"clove/internals/cache"
+	repository "clove/internals/services/generatedRepo"
+	"clove/internals/services/types"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type CredentialService struct {
-	*types.BaseService
-}
-
-// New creates a CredentialService backed by the given DB and optional cache client.
-func New(db *repository.Queries, cacheClient *cache.Client) *CredentialService {
+// New creates a standalone AuthService backed by the given DB and optional cache client.
+// Use this when you only need credential lookup (e.g. for middleware setup).
+func New(db *repository.Queries, cacheClient *cache.Client) *AuthService {
 	base := &types.BaseService{DB: db}
 	if cacheClient != nil {
 		base.WithCache(cacheClient)
 	}
-	return &CredentialService{BaseService: base}
+	return &AuthService{BaseService: base}
 }
 
 type InsertParams struct {
@@ -42,7 +40,7 @@ func nullUUID(id uuid.UUID) pgtype.UUID {
 	return pgtype.UUID{Bytes: id, Valid: true}
 }
 
-func (s *CredentialService) Create(args InsertParams) (*repository.Credential, error) {
+func (s *AuthService) Create(args InsertParams) (*repository.Credential, error) {
 	cred, err := s.DB.Credential_Insert(s.GetCtx(), repository.Credential_InsertParams{
 		Token:  args.Token,
 		UserID: nullUUID(args.UserID),
@@ -61,7 +59,9 @@ func (s *CredentialService) Create(args InsertParams) (*repository.Credential, e
 	return &cred, nil
 }
 
-func (s *CredentialService) GetByToken(ctx context.Context, token string) (*repository.Credential, error) {
+// GetByToken fetches a credential by token, using the cache when available.
+// It accepts an explicit ctx so it can be called from middleware with the request context.
+func (s *AuthService) GetByToken(ctx context.Context, token string) (*repository.Credential, error) {
 	cacheKey := cache.FormatCredentialCacheKey(token)
 
 	if s.CacheReady() {
@@ -85,7 +85,7 @@ func (s *CredentialService) GetByToken(ctx context.Context, token string) (*repo
 	return &cred, nil
 }
 
-func (s *CredentialService) Delete(id uuid.UUID) error {
+func (s *AuthService) Delete(id uuid.UUID) error {
 	err := s.DB.Credential_Delete(s.GetCtx(), s.ToPgUUID(id))
 	if err != nil {
 		return fmt.Errorf("failed to delete credential: %w", err)
@@ -93,10 +93,18 @@ func (s *CredentialService) Delete(id uuid.UUID) error {
 	return nil
 }
 
-func (s *CredentialService) DeleteExpired() error {
+func (s *AuthService) DeleteExpired() error {
 	err := s.DB.Credential_DeleteExpired(s.GetCtx())
 	if err != nil {
 		return fmt.Errorf("failed to delete expired credentials: %w", err)
 	}
 	return nil
+}
+
+func (s *AuthService) ListByUserID(userID uuid.UUID) ([]repository.Credential, error) {
+	creds, err := s.DB.Credential_List_ByUserID(s.GetCtx(), s.ToPgUUID(userID))
+	if err != nil {
+		return nil, fmt.Errorf("failed to list credentials: %w", err)
+	}
+	return creds, nil
 }

@@ -1,16 +1,20 @@
-package auth
+package middleware
 
 import (
 	"context"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
-	"clove/internals/auth/session"
+	envConsts "clove/internals/consts/env"
+	authservice "clove/internals/services/auth"
 	repository "clove/internals/services/generatedRepo"
 
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+const cookieName = "euf_k15"
 
 type SessionType string
 
@@ -21,7 +25,7 @@ const (
 )
 
 type Session struct {
-	Permissions PermissionsBuilder
+	Permissions authservice.PermissionsBuilder
 	SessionType SessionType
 	UserID      pgtype.UUID
 	AppID       pgtype.UUID
@@ -34,6 +38,44 @@ type CredentialLookup interface {
 }
 
 type sessionCtxKey struct{}
+
+// SessionFromContext retrieves the session stored in the context by SessionMiddleware or AuthMiddleware.
+func SessionFromContext(ctx context.Context) (*Session, bool) {
+	s, ok := ctx.Value(sessionCtxKey{}).(*Session)
+	return s, ok
+}
+
+// UnAuthResponse writes a 401 Unauthorized response.
+func UnAuthResponse(w http.ResponseWriter) {
+	w.WriteHeader(http.StatusUnauthorized)
+}
+
+// SetSessionCookie writes the session token as an HTTP-only cookie.
+func SetSessionCookie(w http.ResponseWriter, token string, expires time.Time) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     cookieName,
+		Value:    token,
+		Expires:  expires,
+		HttpOnly: true,
+		Secure:   envConsts.IsProd(),
+		SameSite: http.SameSiteDefaultMode,
+		Path:     "/",
+	})
+}
+
+// ClearSessionCookie expires the session cookie immediately.
+func ClearSessionCookie(w http.ResponseWriter) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     cookieName,
+		Value:    "",
+		Expires:  time.Unix(0, 0),
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   envConsts.IsProd(),
+		SameSite: http.SameSiteDefaultMode,
+		Path:     "/",
+	})
+}
 
 // AuthMiddleware validates the request credential and stores the resulting Session
 // in the request context. Responds 401 if auth fails.
@@ -67,24 +109,10 @@ func SessionMiddleware(creds CredentialLookup) func(http.Handler) http.Handler {
 	}
 }
 
-func SessionFromContext(ctx context.Context) (*Session, bool) {
-	s, ok := ctx.Value(sessionCtxKey{}).(*Session)
-	return s, ok
-}
-
-func UnAuthResponse(w http.ResponseWriter) {
-	w.WriteHeader(http.StatusUnauthorized)
-}
-
-// SetSessionCookie writes the session token as an HTTP-only cookie.
-func SetSessionCookie(w http.ResponseWriter, token string, expires time.Time) {
-	session.Set(w, token, expires)
-}
-
 // ParseSession extracts the token from the request and looks it up via creds.
 // Returns an error if the token is missing, not found, or expired.
 func ParseSession(r *http.Request, creds CredentialLookup) (*Session, error) {
-	token := session.ExtractToken(r)
+	token := extractToken(r)
 	if token == "" {
 		return nil, errors.New("unauthorized")
 	}
@@ -98,7 +126,7 @@ func ParseSession(r *http.Request, creds CredentialLookup) (*Session, error) {
 		return nil, errors.New("unauthorized")
 	}
 
-	perms, err := ParsePermissions([]byte(cred.Permissions))
+	perms, err := authservice.ParsePermissions([]byte(cred.Permissions))
 	if err != nil {
 		return nil, errors.New("unauthorized")
 	}
@@ -121,4 +149,23 @@ func credTypeToSessionType(t repository.CredentialType) SessionType {
 	default:
 		return RegularSession
 	}
+}
+
+func extractToken(r *http.Request) string {
+	if bearer := bearerFrom(r.Header.Get("Authorization")); bearer != "" {
+		return bearer
+	}
+	cookie, err := r.Cookie(cookieName)
+	if err != nil {
+		return ""
+	}
+	return cookie.Value
+}
+
+func bearerFrom(header string) string {
+	_, after, ok := strings.Cut(header, "Bearer ")
+	if !ok {
+		return ""
+	}
+	return after
 }

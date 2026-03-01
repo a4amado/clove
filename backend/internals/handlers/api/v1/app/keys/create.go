@@ -2,10 +2,10 @@ package AppKeysHandlersV1
 
 import (
 	"clove/internals/apperrors"
-	"clove/internals/auth"
+	"clove/internals/middleware"
+	authservice "clove/internals/services/auth"
 	"clove/internals/services"
 	appservice "clove/internals/services/apps"
-	credentialservice "clove/internals/services/credential"
 	repository "clove/internals/services/generatedRepo"
 	"context"
 	"net/http"
@@ -27,22 +27,22 @@ type CreateKeyOutput struct {
 
 func CreateAppApiKey() usecase.Interactor {
 	u := usecase.NewInteractor(func(ctx context.Context, input CreateKeyInput, output *CreateKeyOutput) error {
-		session, ok := auth.SessionFromContext(ctx)
-		if !ok || !session.Permissions.Can(auth.KEY, auth.CREATE) {
+		session, ok := middleware.SessionFromContext(ctx)
+		if !ok || !session.Permissions.Can(authservice.KEY, authservice.CREATE) {
 			return &apperrors.AppError{
 				StatusCode: http.StatusUnauthorized,
 				Code:       "UNAUTHORIZED",
 			}
 		}
 
-		token, err := auth.GenRandKey(32)
+		token, err := authservice.GenRandKey(32)
 		if err != nil {
 			return &apperrors.AppError{StatusCode: http.StatusInternalServerError}
 		}
 
-		perms := auth.NewPermissionsBuilder()
-		perms.Allow(auth.DELIVERY, auth.CREATE)
-		perms.Allow(auth.OneTimeToken, auth.CREATE)
+		perms := authservice.NewPermissionsBuilder()
+		perms.Allow(authservice.DELIVERY, authservice.CREATE)
+		perms.Allow(authservice.OneTimeToken, authservice.CREATE)
 		permsStr, _ := perms.String()
 
 		srvs, tx, err := services.New(ctx).WithCache().WithTx()
@@ -50,7 +50,7 @@ func CreateAppApiKey() usecase.Interactor {
 			return &apperrors.AppError{StatusCode: http.StatusInternalServerError}
 		}
 
-		_, err = srvs.Credentials.Create(credentialservice.InsertParams{
+		_, err = srvs.Auth.Create(authservice.InsertParams{
 			Token:       token,
 			AppID:       input.AppID,
 			Type:        repository.CredentialTypeSdk,

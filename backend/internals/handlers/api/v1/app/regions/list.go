@@ -2,7 +2,8 @@ package AppRegionsHandlersV1
 
 import (
 	"clove/internals/apperrors"
-	"clove/internals/auth"
+	"clove/internals/middleware"
+	authservice "clove/internals/services/auth"
 	"clove/internals/services"
 	appservice "clove/internals/services/apps"
 	repository "clove/internals/services/generatedRepo"
@@ -23,8 +24,8 @@ type ListRegionsOutput struct {
 
 func ListAppRegions() usecase.Interactor {
 	u := usecase.NewInteractor(func(ctx context.Context, input ListRegionsInput, output *ListRegionsOutput) error {
-		session, ok := auth.SessionFromContext(ctx)
-		if !ok || !session.Permissions.Can(auth.KEY, auth.READ) {
+		session, ok := middleware.SessionFromContext(ctx)
+		if !ok || !session.Permissions.Can(authservice.KEY, authservice.READ) {
 			return &apperrors.AppError{
 				StatusCode: http.StatusUnauthorized,
 				Code:       "UNAUTHORIZED",

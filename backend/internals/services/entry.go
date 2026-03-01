@@ -4,8 +4,8 @@ import (
 	"clove/internals/cache"
 	postgresPool "clove/internals/data/postgres/pool"
 	"clove/internals/data/valkeyPool"
+	authservice "clove/internals/services/auth"
 	appservice "clove/internals/services/apps"
-	credentialservice "clove/internals/services/credential"
 	repository "clove/internals/services/generatedRepo"
 	"clove/internals/services/types"
 	userservice "clove/internals/services/user"
@@ -16,9 +16,9 @@ import (
 
 type router struct {
 	baseService *types.BaseService
+	Auth        *authservice.AuthService
 	Apps        *appservice.AppsService
 	Users       *userservice.Users
-	Credentials *credentialservice.CredentialService
 }
 
 func New(ctx context.Context) *router {
@@ -30,16 +30,17 @@ func New(ctx context.Context) *router {
 		},
 	}
 	router.baseService.WithCtx(ctx)
+	router.Auth = &authservice.AuthService{
+		BaseService: router.baseService,
+	}
 	router.Apps = &appservice.AppsService{
 		BaseService: router.baseService,
+		Keys:        &appservice.KeysService{BaseService: router.baseService},
+		Regions:     &appservice.RegionsService{BaseService: router.baseService},
 	}
 	router.Users = &userservice.Users{
 		BaseService: router.baseService,
 	}
-	router.Credentials = &credentialservice.CredentialService{
-		BaseService: router.baseService,
-	}
-
 	return router
 }
 

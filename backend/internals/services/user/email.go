@@ -53,3 +53,11 @@ func (e *Emails) Verify(args VerifyEmail) error {
 		Valid: true,
 	})
 }
+
+type GetEmailByCodeParams struct {
+	Code string
+}
+
+func (e *Emails) GetByCode(args GetEmailByCodeParams) (repository.UserEmail, error) {
+	return e.DB.UserEmail_SelectByCode(e.GetCtx(), args.Code)
+}
