@@ -1,7 +1,7 @@
 # Clove — Realtime as a Service
 
 > [!WARNING]
-> In production, this system requires Kafka, a globally distributed geo-replicated PostgreSQL cluster, Redis clusters, and Kubernetes. For the sake of prototyping, this prototype runs on a single Docker Compose setup.
+> In production, this system requires Kafka, a globally distributed geo-replicated PostgreSQL cluster, Redis clusters, and Kubernetes ingress nodes. For the sake of prototyping, this prototype runs on a single Docker Compose setup.
 
 Clove is a hosted real-time messaging infrastructure. It lets you add WebSocket-based message delivery to your application without building or operating the underlying pub/sub, geo-replication, or connection management yourself.
 
