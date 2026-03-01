@@ -1,5 +1,8 @@
 # Clove — Realtime as a Service
 
+> [!WARNING]
+> In production, this system requires Kafka, a globally distributed geo-replicated PostgreSQL cluster, Redis clusters, and Kubernetes. For the sake of prototyping, this prototype runs on a single Docker Compose setup.
+
 Clove is a hosted real-time messaging infrastructure. It lets you add WebSocket-based message delivery to your application without building or operating the underlying pub/sub, geo-replication, or connection management yourself.
 
 You create an **App**, your backend publishes messages to a channel, and your clients receive them instantly over a persistent WebSocket connection. Clove handles the rest.
@@ -9,28 +12,33 @@ You create an **App**, your backend publishes messages to a channel, and your cl
 ## Core Concepts
 
 ### App
+
 An App is the top-level unit in Clove. It maps to your product or one logical tenant within it. Each App has:
+
 - A set of **regions** it operates in
 - **API Keys** your backend uses to publish messages and issue client tokens
 - **Allowed Origins** for WebSocket connections (CORS)
 - A **plan tier** (free, standard, pro) that controls resource limits
 
 ### Channel
+
 A Channel is a named stream within an App. It has no schema — it's just a key (`notifications`, `room:42`, `user:abc123`) that groups related messages. Clients subscribe to a channel when they open a WebSocket connection. Publishers target a channel when they send a message.
 
 ### Region
+
 A Region is a geographic deployment of Clove infrastructure. Each region runs its own message fanout locally to keep delivery latency low. When a message enters one region, Clove replicates it to all other regions so clients everywhere receive it regardless of where the message was published.
 
 Currently active: **dk1** (Denmark).
 
 ### Tokens
+
 Clove uses three token types with distinct lifetimes and permissions:
 
-| Token | Issued to | Lifetime | Can do |
-|---|---|---|------|
-| **Session Token** | Your team (via login) | ~30 days | Manage apps, create API keys |
-| **SDK Token** | Your backend (via API key) | Long-lived | Publish messages, issue client tokens |
-| **One-Time Token (OTT)** | End-user clients | 1 minute | Open a single WebSocket connection |
+| Token                    | Issued to                  | Lifetime   | Can do                                |
+| ------------------------ | -------------------------- | ---------- | ------------------------------------- |
+| **Session Token**        | Your team (via login)      | ~30 days   | Manage apps, create API keys          |
+| **SDK Token**            | Your backend (via API key) | Long-lived | Publish messages, issue client tokens |
+| **One-Time Token (OTT)** | End-user clients           | 1 minute   | Open a single WebSocket connection    |
 
 The OTT model means your clients never hold a long-lived secret. Your backend mints a fresh token per connection; Clove invalidates it immediately on use.
 
@@ -78,8 +86,9 @@ Clove is built around a small set of components, each with a clear role:
 **PostgreSQL** — Source of truth for users, apps, credentials, and API keys. Designed for a globally distributed, geo-sharded deployment.
 
 **Valkey (Redis-compatible)** — Used for two separate concerns:
-- *Cache*: App metadata cached close to the API servers to avoid repeated DB reads.
-- *Fanout*: Pub/sub delivery of messages to connected WebSocket clients within a region. Reads are local-first for low latency.
+
+- _Cache_: App metadata cached close to the API servers to avoid repeated DB reads.
+- _Fanout_: Pub/sub delivery of messages to connected WebSocket clients within a region. Reads are local-first for low latency.
 
 **RabbitMQ** — Cross-region message replication. When a message is published, it goes onto a durable queue routed by region. Each region's Clove instances consume from their own queue and fanout locally. Designed to be replaced with Kafka for higher throughput.
 
@@ -107,15 +116,15 @@ The entry point for messages is stateless — any region can accept a publish fr
 
 All endpoints are under `/v1`. The API serves OpenAPI documentation at `/docs`.
 
-| Group | Endpoints |
-|---|---|
-| Auth | `POST /auth/sign-up`, `POST /auth/sign-in`, `POST /auth/verify`, `GET /auth/me` |
-| Apps | `POST /apps`, `GET /apps/:id` |
-| API Keys | `POST /apps/:id/keys`, `GET /apps/:id/keys`, `DELETE /apps/:id/keys/:key_id` |
-| Regions | `GET /apps/:id/regions`, `PUT /apps/:id/regions` |
-| Client Tokens | `POST /apps/:id/tokens` |
-| Message Entry | `POST /apps/:id/entry?channel_id=...` |
-| WebSocket | `GET /apps/:id/ws` |
+| Group         | Endpoints                                                                       |
+| ------------- | ------------------------------------------------------------------------------- |
+| Auth          | `POST /auth/sign-up`, `POST /auth/sign-in`, `POST /auth/verify`, `GET /auth/me` |
+| Apps          | `POST /apps`, `GET /apps/:id`                                                   |
+| API Keys      | `POST /apps/:id/keys`, `GET /apps/:id/keys`, `DELETE /apps/:id/keys/:key_id`    |
+| Regions       | `GET /apps/:id/regions`, `PUT /apps/:id/regions`                                |
+| Client Tokens | `POST /apps/:id/tokens`                                                         |
+| Message Entry | `POST /apps/:id/entry?channel_id=...`                                           |
+| WebSocket     | `GET /apps/:id/ws`                                                              |
 
 ---
 
